@@ -184,8 +184,8 @@ TOOLS = [
             "Bridge between gene curation (e.g. from resolve_query_to_context_set) and custom_pathway_calc. "
             "Given an agent-curated gene list, return the top-N DoRothEA TF→Target edges where at least one "
             "endpoint is in the gene list AND both endpoints are expressed in the sample (specify cell_ids OR "
-            "cluster_id for the expression context). Returns edge_details "
-            "[{source, target, weight, alpha_src, alpha_tgt, activity}] for agent review/pruning, plus "
+            "cluster_id for the expression context). Returns edge_details sorted by normalized activity "
+            "[{source, target, weight, alpha_src, alpha_tgt, beta, activity_norm}] for agent review/pruning, plus "
             "[[src, tgt, w], ...] ready to feed custom_pathway_calc. Review edge_details and remove off-target "
             "TFs before passing to custom_pathway_calc. Aim for ≥4 edges / ≥5 vertices for a meaningful score."
         ),
@@ -193,7 +193,7 @@ TOOLS = [
             "sampleid":    {"type": "string",  "description": "Sample ID"},
             "genes":       {"type": "array",   "items": {"type": "string"},
                             "description": "Agent-curated gene list. At least one endpoint of each returned edge will be in this list."},
-            "top_n":       {"type": "integer", "description": "Max edges to return sorted by activity desc (default 30)."},
+            "top_n":       {"type": "integer", "description": "Max edges to return sorted by normalized activity desc (default 30)."},
             "cluster_id":  {"type": "string",  "description": "Cluster id for mean expression context."},
             "cell_ids":    {"type": "array",   "items": {"type": "string"},
                             "description": "Cell barcodes for per-cell expression context."},

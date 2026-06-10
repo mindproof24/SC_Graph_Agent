@@ -1401,7 +1401,7 @@ async def resolve_query_to_context_set(
 async def get_expressed_dorothea_edges(
     sampleid:    str       = Field(...,   description="Sample ID"),
     genes:       List[str] = Field(...,   description="Agent-curated gene list. At least one endpoint of each returned edge will be in this list."),
-    top_n:       int       = Field(30,    description="Max edges to return, sorted by activity (alpha_i × alpha_j × |weight|) desc."),
+    top_n:       int       = Field(30,    description="Max edges to return, sorted by normalized activity desc."),
     cluster_id:  Optional[str]       = Field(None,
         description="Cluster id to compute mean expression. Null/empty + cell_ids null/empty → whole-sample mean. Takes priority over cell_ids."),
     cell_ids:    Optional[List[str]] = Field(None,
@@ -1424,7 +1424,7 @@ async def get_expressed_dorothea_edges(
     Returns:
       - edges        : [[src, tgt, weight], ...] — ready for custom_pathway_calc
       - vertices     : unique genes in returned edges
-      - edge_details : [{source, target, weight, alpha_src, alpha_tgt, activity}]
+      - edge_details : [{source, target, weight, alpha_src, alpha_tgt, beta, activity_norm}]
       - n_edges / n_vertices: summary counts
 
     Aim for ≥4 edges / ≥5 vertices before calling custom_pathway_calc.
@@ -1488,6 +1488,10 @@ async def get_expressed_dorothea_edges(
                  if sp.issparse(adata.X) else np.asarray(adata.X).mean(axis=0))
         expr_ctx = "sample_mean"
 
+    alpha_arr = np.asarray(alpha).ravel()
+    alpha_G = float(alpha_arr.sum())
+    alpha_g_sq = alpha_G * alpha_G if alpha_G > 1e-10 else 1.0
+
     rows = []
     for r in df.itertuples(index=False):
         su, tu = str(r.source).upper(), str(r.target).upper()
@@ -1500,17 +1504,19 @@ async def get_expressed_dorothea_edges(
         if ai <= min_alpha or aj <= min_alpha:
             continue
         w        = float(r.weight)
-        activity = ai * aj * abs(w)
+        beta     = abs(w + ai + aj) ** 0.5
+        activity_norm = (ai * aj / alpha_g_sq) * (beta * beta) if alpha_G > 1e-10 else 0.0
         rows.append({
             "source":    r.source,
             "target":    r.target,
             "weight":    round(w, 4),
             "alpha_src": round(ai, 4),
             "alpha_tgt": round(aj, 4),
-            "activity":  round(activity, 6),
+            "beta":      round(beta, 4),
+            "activity_norm": round(activity_norm, 10),
         })
 
-    rows.sort(key=lambda x: x["activity"], reverse=True)
+    rows.sort(key=lambda x: x["activity_norm"], reverse=True)
     rows = rows[:top_n]
 
     edges = [[e["source"], e["target"], e["weight"]] for e in rows]
