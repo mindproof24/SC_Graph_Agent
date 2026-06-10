@@ -1,0 +1,20 @@
+[package]
+name = "cwg_rust"
+version = "0.2.0"
+edition = "2021"
+authors = ["scMCP Team"]
+description = "Rust-accelerated ClusterWeightedGraph"
+license = "MIT"
+
+[lib]
+name = "cwg_rust"
+crate-type = ["cdylib"]
+
+[dependencies]
+pyo3 = { version = "0.22.4", features = ["extension-module"] }
+numpy = "0.22"
+rayon = "1.11"
+ndarray = { version = "0.16", features = ["rayon"] }
+hashbrown = "0.14"
+nalgebra-sparse = "0.11"
+rand = "0.8"

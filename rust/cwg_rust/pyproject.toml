@@ -1,0 +1,24 @@
+[build-system]
+requires = ["maturin>=1.0,<2.0"]
+build-backend = "maturin"
+
+[project]
+name = "cwg-rust"
+version = "0.2.0"
+description = "Rust-accelerated ClusterWeightedGraph for TF cascade analysis"
+authors = [{name = "scMCP Team"}]
+requires-python = ">=3.10"
+classifiers = [
+    "Programming Language :: Rust",
+    "Programming Language :: Python :: Implementation :: CPython",
+]
+dependencies = [
+    "numpy>=1.24",
+    "pandas>=2.0",
+    "scipy>=1.10",
+    "together>=2.7.0",
+]
+
+[tool.maturin]
+module-name = "cwg_rust._cwg_rust"
+python-source = "python"
