@@ -7,6 +7,8 @@ __pycache__/
 *.log
 logs/
 data/
+!vendor/keggx/keggx/data/
+!vendor/keggx/keggx/data/**
 ollama/models/
 *.h5ad
 *.h5

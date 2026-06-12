@@ -1,0 +1,26 @@
+[build-system]
+requires = ["setuptools==81.0.0", "wheel==0.47.0"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "keggx"
+version = "0.1.2+scgraph"
+description = "Vendored modified keggx used by SC Graph Agent KEGG parsing"
+requires-python = ">=3.10"
+dependencies = [
+    "numpy==2.3.5",
+    "pandas==2.3.3",
+    "networkx==3.6.1",
+    "matplotlib==3.10.8",
+    "seaborn==0.13.2",
+    "requests==2.33.1",
+]
+
+[tool.setuptools]
+packages = ["keggx"]
+
+[tool.setuptools.package-data]
+keggx = [
+    "data/KEGG_Graph_processing/*.kgml",
+    "data/KEGG_Graph_processing/mmu/*.kgml",
+]

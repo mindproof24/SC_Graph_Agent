@@ -1,0 +1,493 @@
+<?xml version="1.0"?>
+<!DOCTYPE pathway SYSTEM "https://www.kegg.jp/kegg/xml/KGML_v0.7.2_.dtd">
+<!-- Creation date: Nov 27, 2025 10:55:47 +0900 (GMT+9) -->
+<pathway name="path:mmu03040" org="mmu" number="03040"
+         title="Spliceosome"
+         image="https://www.kegg.jp/kegg/pathway/mmu/mmu03040.png"
+         link="https://www.kegg.jp/kegg-bin/show_pathway?mmu03040">
+    <entry id="75" name="path:mmu03040" type="map"
+        link="https://www.kegg.jp/dbget-bin/www_bget?mmu03040">
+        <graphics name="TITLE:Spliceosome" fgcolor="#000000" bgcolor="#FFFFFF"
+             type="roundrectangle" x="101" y="58" width="122" height="25"/>
+    </entry>
+    <entry id="217" name="mmu:20637" type="gene"
+        link="https://www.kegg.jp/dbget-bin/www_bget?mmu:20637">
+        <graphics name="Snrnp70, 2700022N21Rik, 3200002N22Rik, Rnu1p70, Rnulp70, Snrp70, Srnp70, U1-70, U1-70K" fgcolor="#000000" bgcolor="#BFFFBF"
+             type="rectangle" x="74" y="888" width="46" height="17"/>
+    </entry>
+    <entry id="218" name="mmu:100862206 mmu:382099 mmu:53607 mmu:667350" type="gene"
+        link="https://www.kegg.jp/dbget-bin/www_bget?mmu:100862206+mmu:382099+mmu:53607+mmu:667350">
+        <graphics name="Gm21559..." fgcolor="#000000" bgcolor="#BFFFBF"
+             type="rectangle" x="74" y="905" width="46" height="17"/>
+    </entry>
+    <entry id="219" name="mmu:20630" type="gene"
+        link="https://www.kegg.jp/dbget-bin/www_bget?mmu:20630">
+        <graphics name="Snrpc, Snrp1c, U1-C, U1C" fgcolor="#000000" bgcolor="#BFFFBF"
+             type="rectangle" x="74" y="922" width="46" height="17"/>
+    </entry>
+    <entry id="220" name="mmu:54614 mmu:56194" type="gene"
+        link="https://www.kegg.jp/dbget-bin/www_bget?mmu:54614+mmu:56194">
+        <graphics name="Prpf40b, 2610317D23Rik, Hypc..." fgcolor="#000000" bgcolor="#BFFFBF"
+             type="rectangle" x="128" y="848" width="46" height="17"/>
+    </entry>
+    <entry id="221" name="mmu:67039" type="gene"
+        link="https://www.kegg.jp/dbget-bin/www_bget?mmu:67039">
+        <graphics name="Rbm25, 2600011C06Rik, 2610015J01Rik, A130095G20Rik, RNPC7" fgcolor="#000000" bgcolor="#BFFFBF"
+             type="rectangle" x="128" y="868" width="46" height="17"/>
+    </entry>
+    <entry id="222" name="mmu:107686 mmu:20638 mmu:20641 mmu:20643 mmu:545531 mmu:67332 mmu:68011 mmu:69878" type="gene"
+        link="https://www.kegg.jp/dbget-bin/www_bget?mmu:107686+mmu:20638+mmu:20641+mmu:20643+mmu:545531+mmu:67332+mmu:68011+mmu:69878">
+        <graphics name="Snrpd2, 1810009A06Rik, SMD2..." fgcolor="#000000" bgcolor="#BFFFBF"
+             type="rectangle" x="74" y="871" width="46" height="17"/>
+    </entry>
+    <entry id="223" name="mmu:13207" type="gene"
+        link="https://www.kegg.jp/dbget-bin/www_bget?mmu:13207">
+        <graphics name="Ddx5, 2600009A06Rik, G17P1, HUMP68, Hlr1, p68" fgcolor="#000000" bgcolor="#BFFFBF"
+             type="rectangle" x="128" y="888" width="46" height="17"/>
+    </entry>
+    <entry id="224" name="mmu:56070" type="gene"
+        link="https://www.kegg.jp/dbget-bin/www_bget?mmu:56070">
+        <graphics name="Tcerg1, 2410022J09Rik, 2900090C16Rik, CA150b, FBP23, FBP28, Taf2s, ca150, p144" fgcolor="#000000" bgcolor="#BFFFBF"
+             type="rectangle" x="128" y="908" width="46" height="17"/>
+    </entry>
+    <entry id="225" name="mmu:107686 mmu:20638 mmu:20641 mmu:20643 mmu:545531 mmu:67332 mmu:68011 mmu:69878" type="gene"
+        link="https://www.kegg.jp/dbget-bin/www_bget?mmu:107686+mmu:20638+mmu:20641+mmu:20643+mmu:545531+mmu:67332+mmu:68011+mmu:69878">
+        <graphics name="Snrpd2, 1810009A06Rik, SMD2..." fgcolor="#000000" bgcolor="#BFFFBF"
+             type="rectangle" x="198" y="870" width="46" height="17"/>
+    </entry>
+    <entry id="226" name="mmu:68981" type="gene"
+        link="https://www.kegg.jp/dbget-bin/www_bget?mmu:68981">
+        <graphics name="Snrpa1, 1500015N06Rik" fgcolor="#000000" bgcolor="#BFFFBF"
+             type="rectangle" x="198" y="887" width="46" height="17"/>
+    </entry>
+    <entry id="227" name="mmu:20639" type="gene"
+        link="https://www.kegg.jp/dbget-bin/www_bget?mmu:20639">
+        <graphics name="Snrpb2, 2810052G09Rik" fgcolor="#000000" bgcolor="#BFFFBF"
+             type="rectangle" x="198" y="904" width="46" height="17"/>
+    </entry>
+    <entry id="228" name="mmu:20222 mmu:67465 mmu:75062" type="gene"
+        link="https://www.kegg.jp/dbget-bin/www_bget?mmu:20222+mmu:67465+mmu:75062">
+        <graphics name="Sf3a2, 66kDa, PRP11, SFA66, Sap62..." fgcolor="#000000" bgcolor="#BFFFBF"
+             type="rectangle" x="198" y="920" width="46" height="17"/>
+    </entry>
+    <entry id="229" name="mmu:100861744 mmu:101943 mmu:105243816 mmu:107701 mmu:108168061 mmu:319322 mmu:66055 mmu:66125 mmu:68479 mmu:72047 mmu:81898" type="gene"
+        link="https://www.kegg.jp/dbget-bin/www_bget?mmu:100861744+mmu:101943+mmu:105243816+mmu:107701+mmu:108168061+mmu:319322+mmu:66055+mmu:66125+mmu:68479+mmu:72047+mmu:81898">
+        <graphics name="Gm21181..." fgcolor="#000000" bgcolor="#BFFFBF"
+             type="rectangle" x="198" y="937" width="46" height="17"/>
+    </entry>
+    <entry id="230" name="mmu:108121 mmu:22185 mmu:233073" type="gene"
+        link="https://www.kegg.jp/dbget-bin/www_bget?mmu:108121+mmu:22185+mmu:233073">
+        <graphics name="U2af1, 2010107D16Rik..." fgcolor="#000000" bgcolor="#BFFFBF"
+             type="rectangle" x="252" y="848" width="46" height="17"/>
+    </entry>
+    <entry id="231" name="mmu:67959" type="gene"
+        link="https://www.kegg.jp/dbget-bin/www_bget?mmu:67959">
+        <graphics name="Puf60, 2410104I19Rik, 2810454F19Rik, SIAHBP1" fgcolor="#000000" bgcolor="#BFFFBF"
+             type="rectangle" x="252" y="868" width="46" height="17"/>
+    </entry>
+    <entry id="232" name="mmu:76479" type="gene"
+        link="https://www.kegg.jp/dbget-bin/www_bget?mmu:76479">
+        <graphics name="Smndc1" fgcolor="#000000" bgcolor="#BFFFBF"
+             type="rectangle" x="252" y="888" width="46" height="17"/>
+    </entry>
+    <entry id="233" name="mmu:76938" type="gene"
+        link="https://www.kegg.jp/dbget-bin/www_bget?mmu:76938">
+        <graphics name="Rbm17, 2700027J02Rik" fgcolor="#000000" bgcolor="#BFFFBF"
+             type="rectangle" x="252" y="908" width="46" height="17"/>
+    </entry>
+    <entry id="234" name="mmu:27967" type="gene"
+        link="https://www.kegg.jp/dbget-bin/www_bget?mmu:27967">
+        <graphics name="Cherp, 5730408I11Rik, D8Wsu96e, DAN16, Scaf6" fgcolor="#000000" bgcolor="#BFFFBF"
+             type="rectangle" x="252" y="928" width="46" height="17"/>
+    </entry>
+    <entry id="235" name="mmu:67958" type="gene"
+        link="https://www.kegg.jp/dbget-bin/www_bget?mmu:67958">
+        <graphics name="U2surp, 2610101N10Rik, Sr140" fgcolor="#000000" bgcolor="#BFFFBF"
+             type="rectangle" x="252" y="948" width="46" height="17"/>
+    </entry>
+    <entry id="236" name="mmu:13204" type="gene"
+        link="https://www.kegg.jp/dbget-bin/www_bget?mmu:13204">
+        <graphics name="Dhx15, DBP1, DEAH9, Ddx15, HRH2, mDEAH9" fgcolor="#000000" bgcolor="#BFFFBF"
+             type="rectangle" x="252" y="968" width="46" height="17"/>
+    </entry>
+    <entry id="237" name="mmu:433702 mmu:68092" type="gene"
+        link="https://www.kegg.jp/dbget-bin/www_bget?mmu:433702+mmu:68092">
+        <graphics name="Ncbp1, CBP80..." fgcolor="#000000" bgcolor="#BFFFBF"
+             type="rectangle" x="765" y="847" width="46" height="17"/>
+    </entry>
+    <entry id="238" name="mmu:15381 mmu:15382 mmu:15387 mmu:19655 mmu:229279 mmu:23983 mmu:51810 mmu:545091 mmu:76936" type="gene"
+        link="https://www.kegg.jp/dbget-bin/www_bget?mmu:15381+mmu:15382+mmu:15387+mmu:19655+mmu:229279+mmu:23983+mmu:51810+mmu:545091+mmu:76936">
+        <graphics name="Hnrnpc, D14Wsu171e, Hnrpc, Hnrpc1, Hnrpc2, hnRNPC1, hnRNPC2, hnrnp-C..." fgcolor="#000000" bgcolor="#BFFFBF"
+             type="rectangle" x="765" y="867" width="46" height="17"/>
+    </entry>
+    <entry id="239" name="mmu:101214 mmu:108014 mmu:110809 mmu:14105 mmu:20382 mmu:20383 mmu:20384 mmu:20462 mmu:225027 mmu:57317 mmu:67996" type="gene"
+        link="https://www.kegg.jp/dbget-bin/www_bget?mmu:101214+mmu:108014+mmu:110809+mmu:14105+mmu:20382+mmu:20383+mmu:20384+mmu:20462+mmu:225027+mmu:57317+mmu:67996">
+        <graphics name="Tra2a, 1500010G04Rik, G430041M01Rik, TRA-2_alpha, TRA2-alpha, Tra2alpha, mAWMS1..." fgcolor="#000000" bgcolor="#BFFFBF"
+             type="rectangle" x="765" y="887" width="46" height="17"/>
+    </entry>
+    <entry id="240" name="mmu:28000" type="gene"
+        link="https://www.kegg.jp/dbget-bin/www_bget?mmu:28000">
+        <graphics name="Prpf19, D19Wsu55e, NMP200, PSO4, Prp19, Snev" fgcolor="#000000" bgcolor="#BFFFBF"
+             type="rectangle" x="516" y="848" width="46" height="17"/>
+    </entry>
+    <entry id="241" name="mmu:102635357 mmu:102635473 mmu:668198 mmu:668203 mmu:668205 mmu:668209 mmu:668213 mmu:668216 mmu:71702" type="gene"
+        link="https://www.kegg.jp/dbget-bin/www_bget?mmu:102635357+mmu:102635473+mmu:668198+mmu:668203+mmu:668205+mmu:668209+mmu:668213+mmu:668216+mmu:71702">
+        <graphics name="Cdc5lrt1, Gm32717..." fgcolor="#000000" bgcolor="#BFFFBF"
+             type="rectangle" x="516" y="865" width="46" height="17"/>
+    </entry>
+    <entry id="242" name="mmu:68183" type="gene"
+        link="https://www.kegg.jp/dbget-bin/www_bget?mmu:68183">
+        <graphics name="Bcas2, 6430539P16Rik" fgcolor="#000000" bgcolor="#BFFFBF"
+             type="rectangle" x="516" y="882" width="46" height="17"/>
+    </entry>
+    <entry id="243" name="mmu:53317" type="gene"
+        link="https://www.kegg.jp/dbget-bin/www_bget?mmu:53317">
+        <graphics name="Plrg1, Tango4" fgcolor="#000000" bgcolor="#BFFFBF"
+             type="rectangle" x="516" y="899" width="46" height="17"/>
+    </entry>
+    <entry id="244" name="mmu:66070" type="gene"
+        link="https://www.kegg.jp/dbget-bin/www_bget?mmu:66070">
+        <graphics name="Cwc15, 0610040D20Rik, 2900052N06Rik, Ed1, c11orf5, mED1" fgcolor="#000000" bgcolor="#BFFFBF"
+             type="rectangle" x="516" y="916" width="46" height="17"/>
+    </entry>
+    <entry id="245" name="mmu:66642" type="gene"
+        link="https://www.kegg.jp/dbget-bin/www_bget?mmu:66642">
+        <graphics name="Ctnnbl1, 5730471K09Rik, NAP, NYD-SP19, P14L" fgcolor="#000000" bgcolor="#BFFFBF"
+             type="rectangle" x="516" y="933" width="46" height="17"/>
+    </entry>
+    <entry id="246" name="mmu:15481 mmu:15482 mmu:15511 mmu:193740" type="gene"
+        link="https://www.kegg.jp/dbget-bin/www_bget?mmu:15481+mmu:15482+mmu:15511+mmu:193740">
+        <graphics name="Hspa8, 2410008N15Rik, Hsc70, Hsc71, Hsc73, Hsp73, Hspa10..." fgcolor="#000000" bgcolor="#BFFFBF"
+             type="rectangle" x="516" y="950" width="46" height="17"/>
+    </entry>
+    <entry id="247" name="mmu:54633" type="gene"
+        link="https://www.kegg.jp/dbget-bin/www_bget?mmu:54633">
+        <graphics name="Pqbp1, PQBP-1, Sfc2, npw38" fgcolor="#000000" bgcolor="#BFFFBF"
+             type="rectangle" x="516" y="974" width="46" height="17"/>
+    </entry>
+    <entry id="248" name="mmu:66877 mmu:67439 mmu:68592" type="gene"
+        link="https://www.kegg.jp/dbget-bin/www_bget?mmu:66877+mmu:67439+mmu:68592">
+        <graphics name="Crnkl1, 1200013P10Rik, 5730590A01Rik, crn..." fgcolor="#000000" bgcolor="#BFFFBF"
+             type="rectangle" x="572" y="868" width="46" height="17"/>
+    </entry>
+    <entry id="249" name="mmu:60321" type="gene"
+        link="https://www.kegg.jp/dbget-bin/www_bget?mmu:60321">
+        <graphics name="Wbp11, 2510026P17Rik, D6Wsu113e, Npwbp, SIPP1" fgcolor="#000000" bgcolor="#BFFFBF"
+             type="rectangle" x="516" y="991" width="46" height="17"/>
+    </entry>
+    <entry id="250" name="mmu:66354" type="gene"
+        link="https://www.kegg.jp/dbget-bin/www_bget?mmu:66354">
+        <graphics name="Snw1, 2310008B08Rik, NCoA-62, SKIP, Skiip" fgcolor="#000000" bgcolor="#BFFFBF"
+             type="rectangle" x="572" y="848" width="46" height="17"/>
+    </entry>
+    <entry id="251" name="mmu:57905" type="gene"
+        link="https://www.kegg.jp/dbget-bin/www_bget?mmu:57905">
+        <graphics name="Isy1, 5830446M03Rik" fgcolor="#000000" bgcolor="#BFFFBF"
+             type="rectangle" x="572" y="888" width="46" height="17"/>
+    </entry>
+    <entry id="252" name="mmu:68816" type="gene"
+        link="https://www.kegg.jp/dbget-bin/www_bget?mmu:68816">
+        <graphics name="Ppil1, 1110060O10Rik, Cypl1" fgcolor="#000000" bgcolor="#BFFFBF"
+             type="rectangle" x="572" y="908" width="46" height="17"/>
+    </entry>
+    <entry id="253" name="mmu:56031" type="gene"
+        link="https://www.kegg.jp/dbget-bin/www_bget?mmu:56031">
+        <graphics name="Ppie, 2010010D16Rik, Cyp33" fgcolor="#000000" bgcolor="#BFFFBF"
+             type="rectangle" x="572" y="928" width="46" height="17"/>
+    </entry>
+    <entry id="254" name="mmu:72654" type="gene"
+        link="https://www.kegg.jp/dbget-bin/www_bget?mmu:72654">
+        <graphics name="Ccdc12, 2700094L05Rik" fgcolor="#000000" bgcolor="#BFFFBF"
+             type="rectangle" x="572" y="948" width="46" height="17"/>
+    </entry>
+    <entry id="255" name="mmu:66810" type="gene"
+        link="https://www.kegg.jp/dbget-bin/www_bget?mmu:66810">
+        <graphics name="Rbm22, 8430430L24Rik" fgcolor="#000000" bgcolor="#BFFFBF"
+             type="rectangle" x="572" y="968" width="46" height="17"/>
+    </entry>
+    <entry id="256" name="mmu:11834" type="gene"
+        link="https://www.kegg.jp/dbget-bin/www_bget?mmu:11834">
+        <graphics name="Aqr, mKIAA0560" fgcolor="#000000" bgcolor="#BFFFBF"
+             type="rectangle" x="572" y="1008" width="46" height="17"/>
+    </entry>
+    <entry id="257" name="mmu:27756 mmu:50783 mmu:66094 mmu:66373 mmu:67678 mmu:76522 mmu:78651" type="gene"
+        link="https://www.kegg.jp/dbget-bin/www_bget?mmu:27756+mmu:50783+mmu:66094+mmu:66373+mmu:67678+mmu:76522+mmu:78651">
+        <graphics name="Lsm2, D17H6S56E-2, D17H6S56E2, Dmapl, Dmpkap, G7b, Sm-X5, SmX5, snRNP..." fgcolor="#000000" bgcolor="#BFFFBF"
+             type="rectangle" x="320" y="888" width="46" height="17"/>
+    </entry>
+    <entry id="258" name="mmu:107686 mmu:20638 mmu:20641 mmu:20643 mmu:545531 mmu:67332 mmu:68011 mmu:69878" type="gene"
+        link="https://www.kegg.jp/dbget-bin/www_bget?mmu:107686+mmu:20638+mmu:20641+mmu:20643+mmu:545531+mmu:67332+mmu:68011+mmu:69878">
+        <graphics name="Snrpd2, 1810009A06Rik, SMD2..." fgcolor="#000000" bgcolor="#BFFFBF"
+             type="rectangle" x="320" y="905" width="46" height="17"/>
+    </entry>
+    <entry id="259" name="mmu:68988" type="gene"
+        link="https://www.kegg.jp/dbget-bin/www_bget?mmu:68988">
+        <graphics name="Prpf31, 1500019O16Rik, 2810404O06Rik, PRP31, RP11" fgcolor="#000000" bgcolor="#BFFFBF"
+             type="rectangle" x="320" y="971" width="46" height="17"/>
+    </entry>
+    <entry id="260" name="mmu:433064 mmu:66101" type="gene"
+        link="https://www.kegg.jp/dbget-bin/www_bget?mmu:433064+mmu:66101">
+        <graphics name="Gm17748..." fgcolor="#000000" bgcolor="#BFFFBF"
+             type="rectangle" x="320" y="955" width="46" height="17"/>
+    </entry>
+    <entry id="261" name="mmu:70052" type="gene"
+        link="https://www.kegg.jp/dbget-bin/www_bget?mmu:70052">
+        <graphics name="Prpf4, 1600015H11Rik, bN189G18.1" fgcolor="#000000" bgcolor="#BFFFBF"
+             type="rectangle" x="320" y="938" width="46" height="17"/>
+    </entry>
+    <entry id="262" name="mmu:70767" type="gene"
+        link="https://www.kegg.jp/dbget-bin/www_bget?mmu:70767">
+        <graphics name="Prpf3, 3632413F13Rik" fgcolor="#000000" bgcolor="#BFFFBF"
+             type="rectangle" x="320" y="921" width="46" height="17"/>
+    </entry>
+    <entry id="263" name="mmu:118568469 mmu:20826" type="gene"
+        link="https://www.kegg.jp/dbget-bin/www_bget?mmu:118568469+mmu:20826">
+        <graphics name="118568469..." fgcolor="#000000" bgcolor="#BFFFBF"
+             type="rectangle" x="320" y="988" width="46" height="17"/>
+    </entry>
+    <entry id="264" name="mmu:107686 mmu:20638 mmu:20641 mmu:20643 mmu:545531 mmu:67332 mmu:68011 mmu:69878" type="gene"
+        link="https://www.kegg.jp/dbget-bin/www_bget?mmu:107686+mmu:20638+mmu:20641+mmu:20643+mmu:545531+mmu:67332+mmu:68011+mmu:69878">
+        <graphics name="Snrpd2, 1810009A06Rik, SMD2..." fgcolor="#000000" bgcolor="#BFFFBF"
+             type="rectangle" x="379" y="869" width="46" height="17"/>
+    </entry>
+    <entry id="265" name="mmu:20624" type="gene"
+        link="https://www.kegg.jp/dbget-bin/www_bget?mmu:20624">
+        <graphics name="Eftud2, 116kDa, Snrp116, U5-116kD" fgcolor="#000000" bgcolor="#BFFFBF"
+             type="rectangle" x="379" y="886" width="46" height="17"/>
+    </entry>
+    <entry id="266" name="mmu:320632" type="gene"
+        link="https://www.kegg.jp/dbget-bin/www_bget?mmu:320632">
+        <graphics name="Snrnp200, A330064G03Rik, Ascc3l1, HELIC2, U5-200-KD, U5-200KD" fgcolor="#000000" bgcolor="#BFFFBF"
+             type="rectangle" x="379" y="903" width="46" height="17"/>
+    </entry>
+    <entry id="267" name="mmu:68879" type="gene"
+        link="https://www.kegg.jp/dbget-bin/www_bget?mmu:68879">
+        <graphics name="Prpf6, 1190003A07Rik, 2610031L17Rik, ANT-1, U5-102K" fgcolor="#000000" bgcolor="#BFFFBF"
+             type="rectangle" x="379" y="920" width="46" height="17"/>
+    </entry>
+    <entry id="268" name="mmu:192159" type="gene"
+        link="https://www.kegg.jp/dbget-bin/www_bget?mmu:192159">
+        <graphics name="Prpf8, D11Bwg0410e, DBF3/PRP8, Prp8, Sfprp8l" fgcolor="#000000" bgcolor="#BFFFBF"
+             type="rectangle" x="379" y="937" width="46" height="17"/>
+    </entry>
+    <entry id="269" name="mmu:66585" type="gene"
+        link="https://www.kegg.jp/dbget-bin/www_bget?mmu:66585">
+        <graphics name="Snrnp40, 0610009C03Rik, Prp8bp, Wdr57" fgcolor="#000000" bgcolor="#BFFFBF"
+             type="rectangle" x="379" y="954" width="46" height="17"/>
+    </entry>
+    <entry id="270" name="mmu:74351" type="gene"
+        link="https://www.kegg.jp/dbget-bin/www_bget?mmu:74351">
+        <graphics name="Ddx23, 3110082M05Rik, 4921506D17Rik" fgcolor="#000000" bgcolor="#BFFFBF"
+             type="rectangle" x="379" y="971" width="46" height="17"/>
+    </entry>
+    <entry id="271" name="mmu:27366" type="gene"
+        link="https://www.kegg.jp/dbget-bin/www_bget?mmu:27366">
+        <graphics name="Txnl4a, D18Wsu98e, Dim1, Txnl4, U5-15kD, U5-15kDa" fgcolor="#000000" bgcolor="#BFFFBF"
+             type="rectangle" x="379" y="988" width="46" height="17"/>
+    </entry>
+    <entry id="272" name="mmu:66618" type="gene"
+        link="https://www.kegg.jp/dbget-bin/www_bget?mmu:66618">
+        <graphics name="Snrnp27, 2610209M04Rik, Ry1" fgcolor="#000000" bgcolor="#BFFFBF"
+             type="rectangle" x="443" y="847" width="46" height="17"/>
+    </entry>
+    <entry id="273" name="mmu:28035" type="gene"
+        link="https://www.kegg.jp/dbget-bin/www_bget?mmu:28035">
+        <graphics name="Usp39, CGI-21, D6Wsu157e, SAD1" fgcolor="#000000" bgcolor="#BFFFBF"
+             type="rectangle" x="443" y="864" width="46" height="17"/>
+    </entry>
+    <entry id="274" name="mmu:20227" type="gene"
+        link="https://www.kegg.jp/dbget-bin/www_bget?mmu:20227">
+        <graphics name="Sart1, U5-110K" fgcolor="#000000" bgcolor="#BFFFBF"
+             type="rectangle" x="443" y="881" width="46" height="17"/>
+    </entry>
+    <entry id="282" name="mmu:66492" type="gene"
+        link="https://www.kegg.jp/dbget-bin/www_bget?mmu:66492">
+        <graphics name="Zmat2, 2610510D14Rik, 2900082I05Rik" fgcolor="#000000" bgcolor="#BFFFBF"
+             type="rectangle" x="443" y="907" width="46" height="17"/>
+    </entry>
+    <entry id="283" name="mmu:230596 mmu:66921" type="gene"
+        link="https://www.kegg.jp/dbget-bin/www_bget?mmu:230596+mmu:66921">
+        <graphics name="Prpf38a, 2410002M20Rik..." fgcolor="#000000" bgcolor="#BFFFBF"
+             type="rectangle" x="443" y="927" width="46" height="17"/>
+    </entry>
+    <entry id="284" name="mmu:231889" type="gene"
+        link="https://www.kegg.jp/dbget-bin/www_bget?mmu:231889">
+        <graphics name="Bud31, EDG-2, EDG2, G10" fgcolor="#000000" bgcolor="#BFFFBF"
+             type="rectangle" x="572" y="988" width="46" height="17"/>
+    </entry>
+    <entry id="285" name="mmu:115486584 mmu:115486604 mmu:115486637 mmu:115486671 mmu:115486985 mmu:115487280 mmu:115487289 mmu:115487299 mmu:115487300 mmu:115487303 mmu:115487512 mmu:115487518 mmu:115487526 mmu:115487529 mmu:115487530 mmu:115487531 mmu:115487538 mmu:115487542 mmu:115487642 mmu:115487650 mmu:115487657 mmu:115487666 mmu:115487676 mmu:115487842 mmu:115487853 mmu:115487874 mmu:115487885 mmu:115487900 mmu:115487913 mmu:115488051 mmu:115488060 mmu:115488065 mmu:115488073 mmu:115488074 mmu:115488075 mmu:115488077 mmu:115488083 mmu:115488084 mmu:115488226 mmu:115488233 mmu:115488415 mmu:115488423 mmu:115488430 mmu:115488545 mmu:115488554 mmu:115488561 mmu:115488594 mmu:115488605 mmu:115488697 mmu:115488707 mmu:115488709 mmu:115488717 mmu:115488832 mmu:115488836 mmu:115488845 mmu:115488847 mmu:115488852 mmu:115488853 mmu:115488887 mmu:115488991 mmu:115489000 mmu:115489053 mmu:115489085 mmu:115489090 mmu:115489237 mmu:115489241 mmu:115489248 mmu:115489249 mmu:115489250 mmu:115489251 mmu:115489252 mmu:115489254 mmu:115489381 mmu:115489620 mmu:115489624 mmu:115489626 mmu:115489767 mmu:115489778 mmu:115489789 mmu:115489800 mmu:115489816 mmu:115489821 mmu:115489832 mmu:115489840 mmu:115489842 mmu:115489843 mmu:115489845 mmu:115489849 mmu:115489855 mmu:115489856 mmu:115489857 mmu:115489862 mmu:115489864 mmu:115489865 mmu:115490033 mmu:115490042 mmu:115490045 mmu:115490060 mmu:115490063 mmu:115490064 mmu:115490065 mmu:115490066 mmu:115490075 mmu:115490280 mmu:115490286 mmu:115490287 mmu:115490288 mmu:115490294 mmu:115490298 mmu:115490300 mmu:115490301 mmu:115490478 mmu:115490484 mmu:115490485 mmu:115490486 mmu:115490487 mmu:115490488 mmu:115490489 mmu:115490497 mmu:19842 mmu:19844 mmu:19845 mmu:19847" type="gene"
+        link="https://www.kegg.jp/dbget-bin/www_bget?mmu:115486584+mmu:115486604+mmu:115486637+mmu:115486671+mmu:115486985+mmu:115487280+mmu:115487289+mmu:115487299+mmu:115487300+mmu:115487303+mmu:115487512+mmu:115487518+mmu:115487526+mmu:115487529+mmu:115487530+mmu:115487531+mmu:115487538+mmu:115487542+mmu:115487642+mmu:115487650+mmu:115487657+mmu:115487666+mmu:115487676+mmu:115487842+mmu:115487853+mmu:115487874+mmu:115487885+mmu:115487900+mmu:115487913+mmu:115488051+mmu:115488060+mmu:115488065+mmu:115488073+mmu:115488074+mmu:115488075+mmu:115488077+mmu:115488083+mmu:115488084+mmu:115488226+mmu:115488233+mmu:115488415+mmu:115488423+mmu:115488430+mmu:115488545+mmu:115488554+mmu:115488561+mmu:115488594+mmu:115488605+mmu:115488697+mmu:115488707+mmu:115488709+mmu:115488717+mmu:115488832+mmu:115488836+mmu:115488845+mmu:115488847+mmu:115488852+mmu:115488853+mmu:115488887+mmu:115488991+mmu:115489000+mmu:115489053+mmu:115489085+mmu:115489090+mmu:115489237+mmu:115489241+mmu:115489248+mmu:115489249+mmu:115489250+mmu:115489251+mmu:115489252+mmu:115489254+mmu:115489381+mmu:115489620+mmu:115489624+mmu:115489626+mmu:115489767+mmu:115489778+mmu:115489789+mmu:115489800+mmu:115489816+mmu:115489821+mmu:115489832+mmu:115489840+mmu:115489842+mmu:115489843+mmu:115489845+mmu:115489849+mmu:115489855+mmu:115489856+mmu:115489857+mmu:115489862+mmu:115489864+mmu:115489865+mmu:115490033+mmu:115490042+mmu:115490045+mmu:115490060+mmu:115490063+mmu:115490064+mmu:115490065+mmu:115490066+mmu:115490075+mmu:115490280+mmu:115490286+mmu:115490287+mmu:115490288+mmu:115490294+mmu:115490298+mmu:115490300+mmu:115490301+mmu:115490478+mmu:115490484+mmu:115490485+mmu:115490486+mmu:115490487+mmu:115490488+mmu:115490489+mmu:115490497+mmu:19842+mmu:19844+mmu:19845+mmu:19847">
+        <graphics name="Gm23040..." fgcolor="#000000" bgcolor="#BFFFBF"
+             type="rectangle" x="74" y="848" width="46" height="17"/>
+    </entry>
+    <entry id="286" name="mmu:115486693 mmu:115486988 mmu:115487314 mmu:115487687 mmu:115487688 mmu:115487690 mmu:115487691 mmu:115487694 mmu:115487915 mmu:115487916 mmu:115487917 mmu:115487918 mmu:115487919 mmu:115487920 mmu:115488085 mmu:115488086 mmu:115488234 mmu:115488432 mmu:115488566 mmu:115488571 mmu:115488575 mmu:115488855 mmu:115489257 mmu:115489258 mmu:115489259 mmu:115489260 mmu:115489265 mmu:115489647 mmu:115489869 mmu:115490304 mmu:115490310 mmu:115490501 mmu:19848" type="gene"
+        link="https://www.kegg.jp/dbget-bin/www_bget?mmu:115486693+mmu:115486988+mmu:115487314+mmu:115487687+mmu:115487688+mmu:115487690+mmu:115487691+mmu:115487694+mmu:115487915+mmu:115487916+mmu:115487917+mmu:115487918+mmu:115487919+mmu:115487920+mmu:115488085+mmu:115488086+mmu:115488234+mmu:115488432+mmu:115488566+mmu:115488571+mmu:115488575+mmu:115488855+mmu:115489257+mmu:115489258+mmu:115489259+mmu:115489260+mmu:115489265+mmu:115489647+mmu:115489869+mmu:115490304+mmu:115490310+mmu:115490501+mmu:19848">
+        <graphics name="Gm25259..." fgcolor="#000000" bgcolor="#BFFFBF"
+             type="rectangle" x="198" y="847" width="46" height="17"/>
+    </entry>
+    <entry id="287" name="mmu:115487325 mmu:115487549 mmu:115487699 mmu:115487700 mmu:115488443 mmu:115488862 mmu:115489060 mmu:115490087 mmu:115490088 mmu:115490089 mmu:97418" type="gene"
+        link="https://www.kegg.jp/dbget-bin/www_bget?mmu:115487325+mmu:115487549+mmu:115487699+mmu:115487700+mmu:115488443+mmu:115488862+mmu:115489060+mmu:115490087+mmu:115490088+mmu:115490089+mmu:97418">
+        <graphics name="Gm25313..." fgcolor="#000000" bgcolor="#BFFFBF"
+             type="rectangle" x="379" y="846" width="46" height="17"/>
+    </entry>
+    <entry id="288" name="mmu:115487318 mmu:115487547 mmu:115487548 mmu:115488240 mmu:115488858 mmu:115489653 mmu:115490084 mmu:115490086 mmu:115490316 mmu:115490317 mmu:115490318 mmu:115490319" type="gene"
+        link="https://www.kegg.jp/dbget-bin/www_bget?mmu:115487318+mmu:115487547+mmu:115487548+mmu:115488240+mmu:115488858+mmu:115489653+mmu:115490084+mmu:115490086+mmu:115490316+mmu:115490317+mmu:115490318+mmu:115490319">
+        <graphics name="Gm25995..." fgcolor="#000000" bgcolor="#BFFFBF"
+             type="rectangle" x="320" y="848" width="46" height="17"/>
+    </entry>
+    <entry id="289" name="mmu:115486559 mmu:115486560 mmu:115486561 mmu:115486562 mmu:115486563 mmu:115486564 mmu:115486565 mmu:115486567 mmu:115486568 mmu:115486569 mmu:115486570 mmu:115486571 mmu:115486572 mmu:115486573 mmu:115486575 mmu:115486576 mmu:115486577 mmu:115486579 mmu:115486580 mmu:115486581 mmu:115486582 mmu:115486585 mmu:115486586 mmu:115486587 mmu:115486776 mmu:115486786 mmu:115486797 mmu:115486808 mmu:115486818 mmu:115486822 mmu:115486825 mmu:115486835 mmu:115486839 mmu:115486840 mmu:115486843 mmu:115486848 mmu:115486849 mmu:115486850 mmu:115486851 mmu:115486852 mmu:115486853 mmu:115486854 mmu:115486855 mmu:115486856 mmu:115486857 mmu:115486858 mmu:115486859 mmu:115486860 mmu:115486861 mmu:115486996 mmu:115486997 mmu:115486998 mmu:115486999 mmu:115487000 mmu:115487001 mmu:115487002 mmu:115487003 mmu:115487004 mmu:115487005 mmu:115487006 mmu:115487007 mmu:115487008 mmu:115487009 mmu:115487010 mmu:115487011 mmu:115487012 mmu:115487013 mmu:115487015 mmu:115487016 mmu:115487017 mmu:115487018 mmu:115487019 mmu:115487020 mmu:115487023 mmu:115487024 mmu:115487027 mmu:115487028 mmu:115487029 mmu:115487030 mmu:115487031 mmu:115487032 mmu:115487234 mmu:115487235 mmu:115487236 mmu:115487237 mmu:115487238 mmu:115487241 mmu:115487244 mmu:115487245 mmu:115487246 mmu:115487249 mmu:115487250 mmu:115487251 mmu:115487326 mmu:115487327 mmu:115487328 mmu:115487329 mmu:115487331 mmu:115487332 mmu:115487333 mmu:115487334 mmu:115487335 mmu:115487336 mmu:115487337 mmu:115487338 mmu:115487339 mmu:115487340 mmu:115487341 mmu:115487342 mmu:115487343 mmu:115487344 mmu:115487345 mmu:115487488 mmu:115487489 mmu:115487490 mmu:115487492 mmu:115487494 mmu:115487495 mmu:115487496 mmu:115487497 mmu:115487501 mmu:115487502 mmu:115487503 mmu:115487550 mmu:115487551 mmu:115487552 mmu:115487553 mmu:115487554 mmu:115487555 mmu:115487556 mmu:115487557 mmu:115487558 mmu:115487559 mmu:115487560 mmu:115487561 mmu:115487562 mmu:115487563 mmu:115487564 mmu:115487565 mmu:115487566 mmu:115487567 mmu:115487568 mmu:115487569 mmu:115487570 mmu:115487571 mmu:115487572 mmu:115487573 mmu:115487574 mmu:115487575 mmu:115487576 mmu:115487578 mmu:115487579 mmu:115487580 mmu:115487581 mmu:115487582 mmu:115487583 mmu:115487584 mmu:115487585 mmu:115487586 mmu:115487587 mmu:115487588 mmu:115487589 mmu:115487590 mmu:115487591 mmu:115487592 mmu:115487593 mmu:115487594 mmu:115487596 mmu:115487597 mmu:115487598 mmu:115487599 mmu:115487600 mmu:115487601 mmu:115487602 mmu:115487603 mmu:115487604 mmu:115487605 mmu:115487606 mmu:115487607 mmu:115487608 mmu:115487609 mmu:115487610 mmu:115487611 mmu:115487612 mmu:115487613 mmu:115487614 mmu:115487615 mmu:115487617 mmu:115487618 mmu:115487619 mmu:115487622 mmu:115487623 mmu:115487625 mmu:115487626 mmu:115487628 mmu:115487629 mmu:115487630 mmu:115487701 mmu:115487702 mmu:115487703 mmu:115487704 mmu:115487705 mmu:115487706 mmu:115487707 mmu:115487708 mmu:115487709 mmu:115487710 mmu:115487711 mmu:115487712 mmu:115487713 mmu:115487714 mmu:115487837 mmu:115487838 mmu:115487839 mmu:115487840 mmu:115487841 mmu:115487843 mmu:115487844 mmu:115487845 mmu:115487846 mmu:115487847 mmu:115487848 mmu:115487849 mmu:115487850 mmu:115487851 mmu:115487852 mmu:115487854 mmu:115487855 mmu:115487856 mmu:115487857 mmu:115487859 mmu:115487860 mmu:115487862 mmu:115487865 mmu:115487866 mmu:115487868 mmu:115487869 mmu:115487871 mmu:115487873 mmu:115487930 mmu:115487931 mmu:115487932 mmu:115487933 mmu:115487934 mmu:115487935 mmu:115487936 mmu:115487937 mmu:115487938 mmu:115487939 mmu:115487940 mmu:115487941 mmu:115487942 mmu:115488033 mmu:115488034 mmu:115488037 mmu:115488038 mmu:115488040 mmu:115488044 mmu:115488045 mmu:115488091 mmu:115488093 mmu:115488094 mmu:115488095 mmu:115488096 mmu:115488097 mmu:115488098 mmu:115488099 mmu:115488100 mmu:115488101 mmu:115488102 mmu:115488104 mmu:115488105 mmu:115488106 mmu:115488107 mmu:115488108 mmu:115488109 mmu:115488110 mmu:115488111 mmu:115488112 mmu:115488113 mmu:115488114 mmu:115488117 mmu:115488118 mmu:115488241 mmu:115488242 mmu:115488243 mmu:115488244 mmu:115488245 mmu:115488246 mmu:115488247 mmu:115488248 mmu:115488249 mmu:115488250 mmu:115488251 mmu:115488252 mmu:115488253 mmu:115488254 mmu:115488255 mmu:115488256 mmu:115488257 mmu:115488258 mmu:115488259 mmu:115488260 mmu:115488261 mmu:115488262 mmu:115488263 mmu:115488265 mmu:115488266 mmu:115488387 mmu:115488388 mmu:115488389 mmu:115488392 mmu:115488393 mmu:115488444 mmu:115488445 mmu:115488446 mmu:115488447 mmu:115488448 mmu:115488449 mmu:115488450 mmu:115488451 mmu:115488452 mmu:115488453 mmu:115488454 mmu:115488455 mmu:115488456 mmu:115488457 mmu:115488458 mmu:115488459 mmu:115488460 mmu:115488462 mmu:115488463 mmu:115488464 mmu:115488465 mmu:115488579 mmu:115488580 mmu:115488581 mmu:115488582 mmu:115488583 mmu:115488584 mmu:115488585 mmu:115488586 mmu:115488587 mmu:115488588 mmu:115488589 mmu:115488590 mmu:115488591 mmu:115488592 mmu:115488593 mmu:115488595 mmu:115488596 mmu:115488597 mmu:115488598 mmu:115488600 mmu:115488601 mmu:115488603 mmu:115488604 mmu:115488607 mmu:115488609 mmu:115488676 mmu:115488677 mmu:115488678 mmu:115488681 mmu:115488723 mmu:115488724 mmu:115488725 mmu:115488726 mmu:115488727 mmu:115488728 mmu:115488729 mmu:115488730 mmu:115488731 mmu:115488732 mmu:115488733 mmu:115488734 mmu:115488735 mmu:115488736 mmu:115488737 mmu:115488738 mmu:115488739 mmu:115488740 mmu:115488741 mmu:115488742 mmu:115488743 mmu:115488744 mmu:115488746 mmu:115488747 mmu:115488748 mmu:115488749 mmu:115488751 mmu:115488752 mmu:115488754 mmu:115488755 mmu:115488863 mmu:115488864 mmu:115488865 mmu:115488866 mmu:115488867 mmu:115488868 mmu:115488869 mmu:115488870 mmu:115488871 mmu:115488872 mmu:115488873 mmu:115488874 mmu:115488876 mmu:115488877 mmu:115488878 mmu:115488879 mmu:115488880 mmu:115488881 mmu:115488882 mmu:115488883 mmu:115488884 mmu:115488885 mmu:115488886 mmu:115488888 mmu:115488889 mmu:115488890 mmu:115488966 mmu:115488967 mmu:115488968 mmu:115488969 mmu:115488970 mmu:115488971 mmu:115488972 mmu:115488973 mmu:115488974 mmu:115488975 mmu:115488976 mmu:115488977 mmu:115488980 mmu:115488981 mmu:115488982 mmu:115488985 mmu:115488986 mmu:115488987 mmu:115489061 mmu:115489062 mmu:115489063 mmu:115489064 mmu:115489065 mmu:115489066 mmu:115489067 mmu:115489068 mmu:115489069 mmu:115489070 mmu:115489071 mmu:115489072 mmu:115489073 mmu:115489074 mmu:115489076 mmu:115489077 mmu:115489157 mmu:115489158 mmu:115489159 mmu:115489160 mmu:115489161 mmu:115489162 mmu:115489163 mmu:115489164 mmu:115489165 mmu:115489166 mmu:115489167 mmu:115489168 mmu:115489169 mmu:115489170 mmu:115489171 mmu:115489173 mmu:115489174 mmu:115489175 mmu:115489176 mmu:115489178 mmu:115489179 mmu:115489180 mmu:115489181 mmu:115489182 mmu:115489183 mmu:115489184 mmu:115489187 mmu:115489188 mmu:115489189 mmu:115489190 mmu:115489191 mmu:115489192 mmu:115489193 mmu:115489194 mmu:115489195 mmu:115489196 mmu:115489197 mmu:115489199 mmu:115489200 mmu:115489202 mmu:115489203 mmu:115489271 mmu:115489272 mmu:115489273 mmu:115489274 mmu:115489275 mmu:115489276 mmu:115489278 mmu:115489279 mmu:115489280 mmu:115489281 mmu:115489282 mmu:115489306 mmu:115489320 mmu:115489324 mmu:115489348 mmu:115489349 mmu:115489353 mmu:115489354 mmu:115489355 mmu:115489359 mmu:115489368 mmu:115489369 mmu:115489370 mmu:115489564 mmu:115489565 mmu:115489566 mmu:115489568 mmu:115489569 mmu:115489570 mmu:115489572 mmu:115489573 mmu:115489574 mmu:115489575 mmu:115489576 mmu:115489577 mmu:115489578 mmu:115489581 mmu:115489582 mmu:115489583 mmu:115489584 mmu:115489585 mmu:115489655 mmu:115489656 mmu:115489657 mmu:115489658 mmu:115489659 mmu:115489660 mmu:115489661 mmu:115489662 mmu:115489663 mmu:115489664 mmu:115489665 mmu:115489666 mmu:115489667 mmu:115489668 mmu:115489669 mmu:115489670 mmu:115489671 mmu:115489672 mmu:115489752 mmu:115489753 mmu:115489754 mmu:115489755 mmu:115489756 mmu:115489757 mmu:115489758 mmu:115489759 mmu:115489760 mmu:115489761 mmu:115489762 mmu:115489763 mmu:115489764 mmu:115489765 mmu:115489766 mmu:115489768 mmu:115489769 mmu:115489770 mmu:115489771 mmu:115489772 mmu:115489773 mmu:115489774 mmu:115489775 mmu:115489776 mmu:115489777 mmu:115489779 mmu:115489780 mmu:115489781 mmu:115489782 mmu:115489783 mmu:115489784 mmu:115489785 mmu:115489786 mmu:115489787 mmu:115489788 mmu:115489790 mmu:115489791 mmu:115489793 mmu:115489794 mmu:115489795 mmu:115489796 mmu:115489797 mmu:115489799 mmu:115489876 mmu:115489877 mmu:115489878 mmu:115489879 mmu:115489880 mmu:115489881 mmu:115489882 mmu:115489883 mmu:115489884 mmu:115489885 mmu:115490002 mmu:115490003 mmu:115490004 mmu:115490006 mmu:115490007 mmu:115490008 mmu:115490009 mmu:115490010 mmu:115490012 mmu:115490013 mmu:115490014 mmu:115490015 mmu:115490016 mmu:115490017 mmu:115490018 mmu:115490019 mmu:115490020 mmu:115490021 mmu:115490022 mmu:115490023 mmu:115490024 mmu:115490025 mmu:115490026 mmu:115490028 mmu:115490029 mmu:115490031 mmu:115490032 mmu:115490090 mmu:115490091 mmu:115490092 mmu:115490093 mmu:115490094 mmu:115490095 mmu:115490096 mmu:115490097 mmu:115490098 mmu:115490099 mmu:115490100 mmu:115490101 mmu:115490220 mmu:115490221 mmu:115490222 mmu:115490223 mmu:115490224 mmu:115490225 mmu:115490226 mmu:115490227 mmu:115490228 mmu:115490229 mmu:115490230 mmu:115490231 mmu:115490232 mmu:115490233 mmu:115490234 mmu:115490235 mmu:115490236 mmu:115490237 mmu:115490239 mmu:115490240 mmu:115490241 mmu:115490243 mmu:115490245 mmu:115490246 mmu:115490249 mmu:115490250 mmu:115490251 mmu:115490252 mmu:115490255 mmu:115490258 mmu:115490261 mmu:115490323 mmu:115490324 mmu:115490325 mmu:115490326 mmu:115490327 mmu:115490328 mmu:115490329 mmu:115490330 mmu:115490331 mmu:115490447 mmu:115490448 mmu:115490449 mmu:115490450 mmu:115490451 mmu:115490453 mmu:115490454 mmu:115490455 mmu:115490456 mmu:115490457 mmu:115490458 mmu:115490508 mmu:115490509 mmu:115490510 mmu:115490511 mmu:115490512 mmu:115490513 mmu:115490514 mmu:115490515 mmu:115490516 mmu:115490517 mmu:115490518 mmu:115490519 mmu:115490520 mmu:115490521 mmu:115490523 mmu:115490524 mmu:115490526 mmu:115490527 mmu:19862" type="gene"
+        link="https://www.kegg.jp/dbget-bin/www_bget?mmu:115486559+mmu:115486560+mmu:115486561+mmu:115486562+mmu:115486563+mmu:115486564+mmu:115486565+mmu:115486567+mmu:115486568+mmu:115486569+mmu:115486570+mmu:115486571+mmu:115486572+mmu:115486573+mmu:115486575+mmu:115486576+mmu:115486577+mmu:115486579+mmu:115486580+mmu:115486581+mmu:115486582+mmu:115486585+mmu:115486586+mmu:115486587+mmu:115486776+mmu:115486786+mmu:115486797+mmu:115486808+mmu:115486818+mmu:115486822+mmu:115486825+mmu:115486835+mmu:115486839+mmu:115486840+mmu:115486843+mmu:115486848+mmu:115486849+mmu:115486850+mmu:115486851+mmu:115486852+mmu:115486853+mmu:115486854+mmu:115486855+mmu:115486856+mmu:115486857+mmu:115486858+mmu:115486859+mmu:115486860+mmu:115486861+mmu:115486996+mmu:115486997+mmu:115486998+mmu:115486999+mmu:115487000+mmu:115487001+mmu:115487002+mmu:115487003+mmu:115487004+mmu:115487005+mmu:115487006+mmu:115487007+mmu:115487008+mmu:115487009+mmu:115487010+mmu:115487011+mmu:115487012+mmu:115487013+mmu:115487015+mmu:115487016+mmu:115487017+mmu:115487018+mmu:115487019+mmu:115487020+mmu:115487023+mmu:115487024+mmu:115487027+mmu:115487028+mmu:115487029+mmu:115487030+mmu:115487031+mmu:115487032+mmu:115487234+mmu:115487235+mmu:115487236+mmu:115487237+mmu:115487238+mmu:115487241+mmu:115487244+mmu:115487245+mmu:115487246+mmu:115487249+mmu:115487250+mmu:115487251+mmu:115487326+mmu:115487327+mmu:115487328+mmu:115487329+mmu:115487331+mmu:115487332+mmu:115487333+mmu:115487334+mmu:115487335+mmu:115487336+mmu:115487337+mmu:115487338+mmu:115487339+mmu:115487340+mmu:115487341+mmu:115487342+mmu:115487343+mmu:115487344+mmu:115487345+mmu:115487488+mmu:115487489+mmu:115487490+mmu:115487492+mmu:115487494+mmu:115487495+mmu:115487496+mmu:115487497+mmu:115487501+mmu:115487502+mmu:115487503+mmu:115487550+mmu:115487551+mmu:115487552+mmu:115487553+mmu:115487554+mmu:115487555+mmu:115487556+mmu:115487557+mmu:115487558+mmu:115487559+mmu:115487560+mmu:115487561+mmu:115487562+mmu:115487563+mmu:115487564+mmu:115487565+mmu:115487566+mmu:115487567+mmu:115487568+mmu:115487569+mmu:115487570+mmu:115487571+mmu:115487572+mmu:115487573+mmu:115487574+mmu:115487575+mmu:115487576+mmu:115487578+mmu:115487579+mmu:115487580+mmu:115487581+mmu:115487582+mmu:115487583+mmu:115487584+mmu:115487585+mmu:115487586+mmu:115487587+mmu:115487588+mmu:115487589+mmu:115487590+mmu:115487591+mmu:115487592+mmu:115487593+mmu:115487594+mmu:115487596+mmu:115487597+mmu:115487598+mmu:115487599+mmu:115487600+mmu:115487601+mmu:115487602+mmu:115487603+mmu:115487604+mmu:115487605+mmu:115487606+mmu:115487607+mmu:115487608+mmu:115487609+mmu:115487610+mmu:115487611+mmu:115487612+mmu:115487613+mmu:115487614+mmu:115487615+mmu:115487617+mmu:115487618+mmu:115487619+mmu:115487622+mmu:115487623+mmu:115487625+mmu:115487626+mmu:115487628+mmu:115487629+mmu:115487630+mmu:115487701+mmu:115487702+mmu:115487703+mmu:115487704+mmu:115487705+mmu:115487706+mmu:115487707+mmu:115487708+mmu:115487709+mmu:115487710+mmu:115487711+mmu:115487712+mmu:115487713+mmu:115487714+mmu:115487837+mmu:115487838+mmu:115487839+mmu:115487840+mmu:115487841+mmu:115487843+mmu:115487844+mmu:115487845+mmu:115487846+mmu:115487847+mmu:115487848+mmu:115487849+mmu:115487850+mmu:115487851+mmu:115487852+mmu:115487854+mmu:115487855+mmu:115487856+mmu:115487857+mmu:115487859+mmu:115487860+mmu:115487862+mmu:115487865+mmu:115487866+mmu:115487868+mmu:115487869+mmu:115487871+mmu:115487873+mmu:115487930+mmu:115487931+mmu:115487932+mmu:115487933+mmu:115487934+mmu:115487935+mmu:115487936+mmu:115487937+mmu:115487938+mmu:115487939+mmu:115487940+mmu:115487941+mmu:115487942+mmu:115488033+mmu:115488034+mmu:115488037+mmu:115488038+mmu:115488040+mmu:115488044+mmu:115488045+mmu:115488091+mmu:115488093+mmu:115488094+mmu:115488095+mmu:115488096+mmu:115488097+mmu:115488098+mmu:115488099+mmu:115488100+mmu:115488101+mmu:115488102+mmu:115488104+mmu:115488105+mmu:115488106+mmu:115488107+mmu:115488108+mmu:115488109+mmu:115488110+mmu:115488111+mmu:115488112+mmu:115488113+mmu:115488114+mmu:115488117+mmu:115488118+mmu:115488241+mmu:115488242+mmu:115488243+mmu:115488244+mmu:115488245+mmu:115488246+mmu:115488247+mmu:115488248+mmu:115488249+mmu:115488250+mmu:115488251+mmu:115488252+mmu:115488253+mmu:115488254+mmu:115488255+mmu:115488256+mmu:115488257+mmu:115488258+mmu:115488259+mmu:115488260+mmu:115488261+mmu:115488262+mmu:115488263+mmu:115488265+mmu:115488266+mmu:115488387+mmu:115488388+mmu:115488389+mmu:115488392+mmu:115488393+mmu:115488444+mmu:115488445+mmu:115488446+mmu:115488447+mmu:115488448+mmu:115488449+mmu:115488450+mmu:115488451+mmu:115488452+mmu:115488453+mmu:115488454+mmu:115488455+mmu:115488456+mmu:115488457+mmu:115488458+mmu:115488459+mmu:115488460+mmu:115488462+mmu:115488463+mmu:115488464+mmu:115488465+mmu:115488579+mmu:115488580+mmu:115488581+mmu:115488582+mmu:115488583+mmu:115488584+mmu:115488585+mmu:115488586+mmu:115488587+mmu:115488588+mmu:115488589+mmu:115488590+mmu:115488591+mmu:115488592+mmu:115488593+mmu:115488595+mmu:115488596+mmu:115488597+mmu:115488598+mmu:115488600+mmu:115488601+mmu:115488603+mmu:115488604+mmu:115488607+mmu:115488609+mmu:115488676+mmu:115488677+mmu:115488678+mmu:115488681+mmu:115488723+mmu:115488724+mmu:115488725+mmu:115488726+mmu:115488727+mmu:115488728+mmu:115488729+mmu:115488730+mmu:115488731+mmu:115488732+mmu:115488733+mmu:115488734+mmu:115488735+mmu:115488736+mmu:115488737+mmu:115488738+mmu:115488739+mmu:115488740+mmu:115488741+mmu:115488742+mmu:115488743+mmu:115488744+mmu:115488746+mmu:115488747+mmu:115488748+mmu:115488749+mmu:115488751+mmu:115488752+mmu:115488754+mmu:115488755+mmu:115488863+mmu:115488864+mmu:115488865+mmu:115488866+mmu:115488867+mmu:115488868+mmu:115488869+mmu:115488870+mmu:115488871+mmu:115488872+mmu:115488873+mmu:115488874+mmu:115488876+mmu:115488877+mmu:115488878+mmu:115488879+mmu:115488880+mmu:115488881+mmu:115488882+mmu:115488883+mmu:115488884+mmu:115488885+mmu:115488886+mmu:115488888+mmu:115488889+mmu:115488890+mmu:115488966+mmu:115488967+mmu:115488968+mmu:115488969+mmu:115488970+mmu:115488971+mmu:115488972+mmu:115488973+mmu:115488974+mmu:115488975+mmu:115488976+mmu:115488977+mmu:115488980+mmu:115488981+mmu:115488982+mmu:115488985+mmu:115488986+mmu:115488987+mmu:115489061+mmu:115489062+mmu:115489063+mmu:115489064+mmu:115489065+mmu:115489066+mmu:115489067+mmu:115489068+mmu:115489069+mmu:115489070+mmu:115489071+mmu:115489072+mmu:115489073+mmu:115489074+mmu:115489076+mmu:115489077+mmu:115489157+mmu:115489158+mmu:115489159+mmu:115489160+mmu:115489161+mmu:115489162+mmu:115489163+mmu:115489164+mmu:115489165+mmu:115489166+mmu:115489167+mmu:115489168+mmu:115489169+mmu:115489170+mmu:115489171+mmu:115489173+mmu:115489174+mmu:115489175+mmu:115489176+mmu:115489178+mmu:115489179+mmu:115489180+mmu:115489181+mmu:115489182+mmu:115489183+mmu:115489184+mmu:115489187+mmu:115489188+mmu:115489189+mmu:115489190+mmu:115489191+mmu:115489192+mmu:115489193+mmu:115489194+mmu:115489195+mmu:115489196+mmu:115489197+mmu:115489199+mmu:115489200+mmu:115489202+mmu:115489203+mmu:115489271+mmu:115489272+mmu:115489273+mmu:115489274+mmu:115489275+mmu:115489276+mmu:115489278+mmu:115489279+mmu:115489280+mmu:115489281+mmu:115489282+mmu:115489306+mmu:115489320+mmu:115489324+mmu:115489348+mmu:115489349+mmu:115489353+mmu:115489354+mmu:115489355+mmu:115489359+mmu:115489368+mmu:115489369+mmu:115489370+mmu:115489564+mmu:115489565+mmu:115489566+mmu:115489568+mmu:115489569+mmu:115489570+mmu:115489572+mmu:115489573+mmu:115489574+mmu:115489575+mmu:115489576+mmu:115489577+mmu:115489578+mmu:115489581+mmu:115489582+mmu:115489583+mmu:115489584+mmu:115489585+mmu:115489655+mmu:115489656+mmu:115489657+mmu:115489658+mmu:115489659+mmu:115489660+mmu:115489661+mmu:115489662+mmu:115489663+mmu:115489664+mmu:115489665+mmu:115489666+mmu:115489667+mmu:115489668+mmu:115489669+mmu:115489670+mmu:115489671+mmu:115489672+mmu:115489752+mmu:115489753+mmu:115489754+mmu:115489755+mmu:115489756+mmu:115489757+mmu:115489758+mmu:115489759+mmu:115489760+mmu:115489761+mmu:115489762+mmu:115489763+mmu:115489764+mmu:115489765+mmu:115489766+mmu:115489768+mmu:115489769+mmu:115489770+mmu:115489771+mmu:115489772+mmu:115489773+mmu:115489774+mmu:115489775+mmu:115489776+mmu:115489777+mmu:115489779+mmu:115489780+mmu:115489781+mmu:115489782+mmu:115489783+mmu:115489784+mmu:115489785+mmu:115489786+mmu:115489787+mmu:115489788+mmu:115489790+mmu:115489791+mmu:115489793+mmu:115489794+mmu:115489795+mmu:115489796+mmu:115489797+mmu:115489799+mmu:115489876+mmu:115489877+mmu:115489878+mmu:115489879+mmu:115489880+mmu:115489881+mmu:115489882+mmu:115489883+mmu:115489884+mmu:115489885+mmu:115490002+mmu:115490003+mmu:115490004+mmu:115490006+mmu:115490007+mmu:115490008+mmu:115490009+mmu:115490010+mmu:115490012+mmu:115490013+mmu:115490014+mmu:115490015+mmu:115490016+mmu:115490017+mmu:115490018+mmu:115490019+mmu:115490020+mmu:115490021+mmu:115490022+mmu:115490023+mmu:115490024+mmu:115490025+mmu:115490026+mmu:115490028+mmu:115490029+mmu:115490031+mmu:115490032+mmu:115490090+mmu:115490091+mmu:115490092+mmu:115490093+mmu:115490094+mmu:115490095+mmu:115490096+mmu:115490097+mmu:115490098+mmu:115490099+mmu:115490100+mmu:115490101+mmu:115490220+mmu:115490221+mmu:115490222+mmu:115490223+mmu:115490224+mmu:115490225+mmu:115490226+mmu:115490227+mmu:115490228+mmu:115490229+mmu:115490230+mmu:115490231+mmu:115490232+mmu:115490233+mmu:115490234+mmu:115490235+mmu:115490236+mmu:115490237+mmu:115490239+mmu:115490240+mmu:115490241+mmu:115490243+mmu:115490245+mmu:115490246+mmu:115490249+mmu:115490250+mmu:115490251+mmu:115490252+mmu:115490255+mmu:115490258+mmu:115490261+mmu:115490323+mmu:115490324+mmu:115490325+mmu:115490326+mmu:115490327+mmu:115490328+mmu:115490329+mmu:115490330+mmu:115490331+mmu:115490447+mmu:115490448+mmu:115490449+mmu:115490450+mmu:115490451+mmu:115490453+mmu:115490454+mmu:115490455+mmu:115490456+mmu:115490457+mmu:115490458+mmu:115490508+mmu:115490509+mmu:115490510+mmu:115490511+mmu:115490512+mmu:115490513+mmu:115490514+mmu:115490515+mmu:115490516+mmu:115490517+mmu:115490518+mmu:115490519+mmu:115490520+mmu:115490521+mmu:115490523+mmu:115490524+mmu:115490526+mmu:115490527+mmu:19862">
+        <graphics name="Gm25354..." fgcolor="#000000" bgcolor="#BFFFBF"
+             type="rectangle" x="320" y="864" width="46" height="17"/>
+    </entry>
+    <entry id="290" name="mmu:55934" type="gene"
+        link="https://www.kegg.jp/dbget-bin/www_bget?mmu:55934">
+        <graphics name="Rp9, PAP-1, Rp9h" fgcolor="#000000" bgcolor="#BFFFBF"
+             type="rectangle" x="252" y="988" width="46" height="17"/>
+    </entry>
+    <entry id="291" name="mmu:55934" type="gene"
+        link="https://www.kegg.jp/dbget-bin/www_bget?mmu:55934">
+        <graphics name="Rp9, PAP-1, Rp9h" fgcolor="#000000" bgcolor="#BFFFBF"
+             type="rectangle" x="443" y="947" width="46" height="17"/>
+    </entry>
+    <entry id="292" name="mmu:233908" type="gene"
+        link="https://www.kegg.jp/dbget-bin/www_bget?mmu:233908">
+        <graphics name="Fus, D430004D17Rik, D930039C12Rik, Fus1, Tls" fgcolor="#000000" bgcolor="#BFFFBF"
+             type="rectangle" x="128" y="928" width="46" height="17"/>
+    </entry>
+    <entry id="323" name="mmu:212880" type="gene"
+        link="https://www.kegg.jp/dbget-bin/www_bget?mmu:212880">
+        <graphics name="Ddx46, 2200005K02Rik, 8430438J23Rik, mKIAA0801" fgcolor="#000000" bgcolor="#BFFFBF"
+             type="rectangle" x="104" y="256" width="46" height="17"/>
+    </entry>
+    <entry id="324" name="mmu:53817" type="gene"
+        link="https://www.kegg.jp/dbget-bin/www_bget?mmu:53817">
+        <graphics name="Ddx39b, 0610030D10Rik, Bat-1, Bat1, Bat1a, D17H6S81E, D17H6S81E-1, D6S81Eh" fgcolor="#000000" bgcolor="#BFFFBF"
+             type="rectangle" x="104" y="276" width="46" height="17"/>
+    </entry>
+    <entry id="325" name="mmu:20624" type="gene"
+        link="https://www.kegg.jp/dbget-bin/www_bget?mmu:20624">
+        <graphics name="Eftud2, 116kDa, Snrp116, U5-116kD" fgcolor="#000000" bgcolor="#BFFFBF"
+             type="rectangle" x="223" y="694" width="46" height="17"/>
+    </entry>
+    <entry id="326" name="mmu:320632" type="gene"
+        link="https://www.kegg.jp/dbget-bin/www_bget?mmu:320632">
+        <graphics name="Snrnp200, A330064G03Rik, Ascc3l1, HELIC2, U5-200-KD, U5-200KD" fgcolor="#000000" bgcolor="#BFFFBF"
+             type="rectangle" x="223" y="674" width="46" height="17"/>
+    </entry>
+    <entry id="327" name="mmu:74351" type="gene"
+        link="https://www.kegg.jp/dbget-bin/www_bget?mmu:74351">
+        <graphics name="Ddx23, 3110082M05Rik, 4921506D17Rik" fgcolor="#000000" bgcolor="#BFFFBF"
+             type="rectangle" x="110" y="551" width="46" height="17"/>
+    </entry>
+    <entry id="329" name="mmu:69192" type="gene"
+        link="https://www.kegg.jp/dbget-bin/www_bget?mmu:69192">
+        <graphics name="Dhx16, 2410006N22Rik, DBP2, Ddx16, mKIAA0577" fgcolor="#000000" bgcolor="#BFFFBF"
+             type="rectangle" x="422" y="719" width="46" height="17"/>
+    </entry>
+    <entry id="330" name="mmu:64340" type="gene"
+        link="https://www.kegg.jp/dbget-bin/www_bget?mmu:64340">
+        <graphics name="Dhx38, 5730550P09Rik, Ddx38, KIAA0224, Prp16" fgcolor="#000000" bgcolor="#BFFFBF"
+             type="rectangle" x="697" y="534" width="46" height="17"/>
+    </entry>
+    <entry id="331" name="mmu:71713" type="gene"
+        link="https://www.kegg.jp/dbget-bin/www_bget?mmu:71713">
+        <graphics name="Cdc40, 1200003H23Rik, EHB3, PRP17" fgcolor="#000000" bgcolor="#BFFFBF"
+             type="rectangle" x="697" y="554" width="46" height="17"/>
+    </entry>
+    <entry id="332" name="mmu:217207" type="gene"
+        link="https://www.kegg.jp/dbget-bin/www_bget?mmu:217207">
+        <graphics name="Dhx8, Ddx8, mDEAH6, mKIAA4096" fgcolor="#000000" bgcolor="#BFFFBF"
+             type="rectangle" x="682" y="264" width="46" height="17"/>
+    </entry>
+    <entry id="333" name="mmu:193116" type="gene"
+        link="https://www.kegg.jp/dbget-bin/www_bget?mmu:193116">
+        <graphics name="Slu7, D11Ertd730e, D3Bwg0878e" fgcolor="#000000" bgcolor="#BFFFBF"
+             type="rectangle" x="746" y="554" width="46" height="17"/>
+    </entry>
+    <entry id="334" name="mmu:67229" type="gene"
+        link="https://www.kegg.jp/dbget-bin/www_bget?mmu:67229">
+        <graphics name="Prpf18, 2810441A10Rik" fgcolor="#000000" bgcolor="#BFFFBF"
+             type="rectangle" x="746" y="534" width="46" height="17"/>
+    </entry>
+    <entry id="336" name="mmu:13204" type="gene"
+        link="https://www.kegg.jp/dbget-bin/www_bget?mmu:13204">
+        <graphics name="Dhx15, DBP1, DEAH9, Ddx15, HRH2, mDEAH9" fgcolor="#000000" bgcolor="#BFFFBF"
+             type="rectangle" x="556" y="139" width="46" height="17"/>
+    </entry>
+    <entry id="337" name="mmu:22668" type="gene"
+        link="https://www.kegg.jp/dbget-bin/www_bget?mmu:22668">
+        <graphics name="Sf1, BBP, MZFM, WBP4, Zfp162" fgcolor="#000000" bgcolor="#BFFFBF"
+             type="rectangle" x="327" y="188" width="46" height="17"/>
+    </entry>
+    <entry id="338" name="mmu:108121 mmu:22185 mmu:233073" type="gene"
+        link="https://www.kegg.jp/dbget-bin/www_bget?mmu:108121+mmu:22185+mmu:233073">
+        <graphics name="U2af1, 2010107D16Rik..." fgcolor="#000000" bgcolor="#BFFFBF"
+             type="rectangle" x="327" y="208" width="46" height="17"/>
+    </entry>
+    <entry id="339" name="mmu:209416" type="gene"
+        link="https://www.kegg.jp/dbget-bin/www_bget?mmu:209416">
+        <graphics name="Gpkow, 4432411B18, DXErtd697e, DXImx41e, T54" fgcolor="#000000" bgcolor="#BFFFBF"
+             type="rectangle" x="422" y="740" width="46" height="17"/>
+    </entry>
+    <entry id="340" name="mmu:72886" type="gene"
+        link="https://www.kegg.jp/dbget-bin/www_bget?mmu:72886">
+        <graphics name="Yju2, 2900016D05Rik, Ccdc94" fgcolor="#000000" bgcolor="#BFFFBF"
+             type="rectangle" x="593" y="686" width="46" height="17"/>
+    </entry>
+    <entry id="341" name="mmu:67480" type="gene"
+        link="https://www.kegg.jp/dbget-bin/www_bget?mmu:67480">
+        <graphics name="Cwc25, 1300013D05Rik, Ccdc49" fgcolor="#000000" bgcolor="#BFFFBF"
+             type="rectangle" x="593" y="665" width="46" height="17"/>
+    </entry>
+    <entry id="348" name="mmu:215051" type="gene"
+        link="https://www.kegg.jp/dbget-bin/www_bget?mmu:215051">
+        <graphics name="Bud13, D030060M11Rik" fgcolor="#000000" bgcolor="#BFFFBF"
+             type="rectangle" x="637" y="846" width="46" height="17"/>
+    </entry>
+    <entry id="349" name="mmu:209003" type="gene"
+        link="https://www.kegg.jp/dbget-bin/www_bget?mmu:209003">
+        <graphics name="Rbmx2, 2700089A17Rik, 2810411A03Rik, CGI-79" fgcolor="#000000" bgcolor="#BFFFBF"
+             type="rectangle" x="637" y="866" width="46" height="17"/>
+    </entry>
+    <entry id="350" name="mmu:76793" type="gene"
+        link="https://www.kegg.jp/dbget-bin/www_bget?mmu:76793">
+        <graphics name="Snip1, 2410133M08Rik" fgcolor="#000000" bgcolor="#BFFFBF"
+             type="rectangle" x="637" y="886" width="46" height="17"/>
+    </entry>
+    <entry id="365" name="mmu:56215" type="gene"
+        link="https://www.kegg.jp/dbget-bin/www_bget?mmu:56215">
+        <graphics name="Acin1, 2610036I19Rik, 2610510L13Rik, Acinus, Acn, acinusL, acinusS, mKIAA0670" fgcolor="#000000" bgcolor="#BFFFBF"
+             type="rectangle" x="701" y="846" width="46" height="17"/>
+    </entry>
+    <entry id="366" name="mmu:192170 mmu:434050 mmu:434080 mmu:668137" type="gene"
+        link="https://www.kegg.jp/dbget-bin/www_bget?mmu:192170+mmu:434050+mmu:434080+mmu:668137">
+        <graphics name="Eif4a3, 2400003O03Rik, Ddx48, eIF4A-III, mKIAA0111..." fgcolor="#000000" bgcolor="#BFFFBF"
+             type="rectangle" x="701" y="863" width="46" height="17"/>
+    </entry>
+    <entry id="367" name="mmu:60365" type="gene"
+        link="https://www.kegg.jp/dbget-bin/www_bget?mmu:60365">
+        <graphics name="Rbm8a, 2310057C03Rik, Rbm8" fgcolor="#000000" bgcolor="#BFFFBF"
+             type="rectangle" x="701" y="897" width="46" height="17"/>
+    </entry>
+    <entry id="368" name="mmu:17149 mmu:66441" type="gene"
+        link="https://www.kegg.jp/dbget-bin/www_bget?mmu:17149+mmu:66441">
+        <graphics name="Magoh, Mago-m, Mos2..." fgcolor="#000000" bgcolor="#BFFFBF"
+             type="rectangle" x="701" y="914" width="46" height="17"/>
+    </entry>
+    <entry id="370" name="mmu:100042165 mmu:100043292 mmu:100861880 mmu:107829 mmu:21681 mmu:225160 mmu:331401 mmu:386612 mmu:56009 mmu:66231 mmu:73666" type="gene"
+        link="https://www.kegg.jp/dbget-bin/www_bget?mmu:100042165+mmu:100043292+mmu:100861880+mmu:107829+mmu:21681+mmu:225160+mmu:331401+mmu:386612+mmu:56009+mmu:66231+mmu:73666">
+        <graphics name="Thoc2l, 1110004B06Rik, AI451450, D930016D06Rik, Gm3179..." fgcolor="#000000" bgcolor="#BFFFBF"
+             type="rectangle" x="701" y="948" width="46" height="17"/>
+    </entry>
+    <entry id="371" name="mmu:192160" type="gene"
+        link="https://www.kegg.jp/dbget-bin/www_bget?mmu:192160">
+        <graphics name="Casc3, Btz, Mln51" fgcolor="#000000" bgcolor="#BFFFBF"
+             type="rectangle" x="701" y="880" width="46" height="17"/>
+    </entry>
+    <entry id="372" name="mmu:53817" type="gene"
+        link="https://www.kegg.jp/dbget-bin/www_bget?mmu:53817">
+        <graphics name="Ddx39b, 0610030D10Rik, Bat-1, Bat1, Bat1a, D17H6S81E, D17H6S81E-1, D6S81Eh" fgcolor="#000000" bgcolor="#BFFFBF"
+             type="rectangle" x="701" y="931" width="46" height="17"/>
+    </entry>
+</pathway>

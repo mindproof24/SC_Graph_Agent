@@ -19,8 +19,12 @@ from pydantic import BaseModel, Field, ConfigDict
 # from abcoder.backend import NotebookManager  # unused import
 import anndata as ad
 
-# Import FastRAG for knowledge base search
-from fast_rag import get_rag_instance
+# Optional FastRAG knowledge base search. The interactive runtime only needs
+# AnndataBackend, so missing FastRAG must not prevent server startup.
+try:
+    from fast_rag import get_rag_instance
+except Exception:  # pragma: no cover - optional integration
+    get_rag_instance = None
 
 
 # Enable nested event loops to prevent conflicts with Google ADK
@@ -179,7 +183,7 @@ class ScMCPServer:
 
         # Initialize RAG (knowledge base search)
         self.rag = None
-        if enable_rag:
+        if enable_rag and get_rag_instance is not None:
             try:
                 print("🔍 Initializing RAG knowledge base...")
                 self.rag = get_rag_instance()
@@ -187,6 +191,8 @@ class ScMCPServer:
             except Exception as e:
                 print(f"⚠️  RAG initialization failed: {e}")
                 print("   Continuing without knowledge base search...")
+        elif enable_rag:
+            print("⚠️  FastRAG not available; continuing without knowledge base search...")
 
         # Create FastMCP server with lifespan
         self.mcp = FastMCP(

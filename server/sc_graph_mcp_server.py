@@ -37,6 +37,7 @@ import time
 import traceback
 from contextlib import redirect_stdout, redirect_stderr
 from datetime import datetime
+from importlib.resources import files
 
 import numpy as np
 import pandas as pd
@@ -165,7 +166,17 @@ def _log_call(tool_name: str, inputs: dict, result: dict, elapsed_ms: int) -> No
 
 
 DATA_DIR      = os.getenv("MCP_DATA_DIR", str(Path.cwd() / "data"))
-KEGG_DIR      = os.getenv("KEGG_DIR", str(Path(DATA_DIR) / "KEGG_Graph_processing"))
+
+def _default_kegg_dir() -> str:
+    local_kegg = Path(DATA_DIR) / "KEGG_Graph_processing"
+    if local_kegg.exists():
+        return str(local_kegg)
+    try:
+        return str(files("keggx").joinpath("data", "KEGG_Graph_processing"))
+    except Exception:
+        return str(local_kegg)
+
+KEGG_DIR      = os.getenv("KEGG_DIR", _default_kegg_dir())
 _ALIASES_PATH = Path(__file__).parent / ".sc_graph_aliases.json"
 
 
@@ -980,7 +991,7 @@ async def get_cell_kegg_edges(
         mode="per_cell" if anon else "cluster_mean",
     )
 
-    # 임시 컬럼 정리
+    # Temporary Column Removal
     if anon and "__anon_single_cell__" in adata.obs.columns:
         del adata.obs["__anon_single_cell__"]
 
@@ -2002,8 +2013,8 @@ if __name__ == "__main__":
     print("  [cluster]  get_cluster_kegg_edges")
     print("  [cell]     get_astar_cellular_info")
     print("  [cell]     get_cell_kegg_edges")
-    print("  [kg]       get_kg_context")
-    print("  [kg/ctx]   resolve_query_to_context_set")
+    print("  DEPRECATED [kg]       get_kg_context")
+    print("  DEPRECATED [kg/ctx]   resolve_query_to_context_set")
     print("  [custom]   custom_pathway_calc")
     print("  [flex]     execute_pipeline_code")
     print("=" * 60)
