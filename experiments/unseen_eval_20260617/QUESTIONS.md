@@ -2,6 +2,13 @@
 
 This file records the exact prompts and answer labels used for the five UNSEEN 2-vs-2 tasks in this snapshot.
 
+Note: the original task question text still contained the stale line `get_kg_context (marker / mechanism)`.
+The actual evaluation harness was the NO_KG harness and exposed only these nine tools to the model:
+`run_astar_pipeline`, `get_astar_graph_summary`, `get_astar_cellular_info`, `get_cluster_rl_map`,
+`get_cluster_kegg_edges`, `get_cell_kegg_edges`, `execute_pipeline_code`,
+`get_expressed_dorothea_edges`, and `custom_pathway_calc`.
+The result trajectories in this snapshot contain zero `get_kg_context` calls.
+
 ## T Cell Tasks
 
 ### imm_atlas_TT_p01_CD8-positive_alpha-b_vs_effector_memory_CD8-_r000_anon
