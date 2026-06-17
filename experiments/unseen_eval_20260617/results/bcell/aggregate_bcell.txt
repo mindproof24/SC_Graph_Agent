@@ -1,0 +1,12 @@
+
+MODEL base n 32 overall 0.375
+imm_atlas_BB_p01_c15c27_cell_r001_anon n 16 mean 0.0625 sd 0.1654 pass 0 partial 2 zero 14
+imm_atlas_BB_p01_c24c48_cell_r001_anon n 16 mean 0.6875 sd 0.4635 pass 11 partial 0 zero 5
+
+MODEL step9 n 32 overall 0.484375
+imm_atlas_BB_p01_c15c27_cell_r001_anon n 16 mean 0.2812 sd 0.4319 pass 4 partial 1 zero 11
+imm_atlas_BB_p01_c24c48_cell_r001_anon n 16 mean 0.6875 sd 0.4635 pass 11 partial 0 zero 5
+
+DELTA
+imm_atlas_BB_p01_c15c27_cell_r001_anon 0.2188
+imm_atlas_BB_p01_c24c48_cell_r001_anon 0.0
