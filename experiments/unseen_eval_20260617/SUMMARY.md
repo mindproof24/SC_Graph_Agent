@@ -9,6 +9,8 @@ Scoring:
 - Format-corrected audited scoring rescues explicit cell-wise classifications from malformed JSON/tables.
 - One correct cell contributes 0.25.
 
+The exact user-facing prompts and answer labels are recorded in `QUESTIONS.md`.
+
 ## T-cell UNSEEN, Strict
 
 | Model | UNSEEN overall | CD8 memory vs eff.mem CD8 | CD4 helper vs eff.mem CD4 | gamma-delta T vs Treg |
