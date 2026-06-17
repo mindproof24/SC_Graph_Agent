@@ -9,6 +9,7 @@ Scoring:
 - Format-corrected audited scoring rescues explicit cell-wise classifications from malformed JSON/tables.
 - One correct cell contributes 0.25.
 
+The scoring function and audited regrade rules are documented in `SCORING.md`.
 The exact user-facing prompts and answer labels are recorded in `QUESTIONS.md`.
 Those prompts contain a stale `get_kg_context` mention from the task text template, but the actual runs used the NO_KG 9-tool harness; no result trajectory called `get_kg_context`.
 
