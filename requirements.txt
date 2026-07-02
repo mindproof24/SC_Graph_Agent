@@ -12,7 +12,6 @@ pydantic==2.13.3
 prompt-toolkit==3.0.52
 requests==2.33.1
 httpx==0.28.1
-nest_asyncio==1.6.0
 tqdm==4.67.3
 decoupler==2.1.6
 liana==1.7.1
