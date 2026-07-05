@@ -41,6 +41,9 @@ HF_MODEL_NAME  = "unsloth/gpt-oss-20b-BF16"
 OLLAMA_MODEL   = "gpt-oss:20b"
 OLLAMA_API_URL = os.getenv("OLLAMA_URL", "http://localhost:11434")
 MCP_URL        = os.getenv("MCP_URL", "http://localhost:8005/mcp")
+OLLAMA_NUM_CTX = int(os.getenv("OLLAMA_NUM_CTX", os.getenv("NUM_CTX", "8192")))
+_OLLAMA_SEED_ENV = os.getenv("OLLAMA_SEED", "").strip()
+OLLAMA_SEED: int | None = int(_OLLAMA_SEED_ENV) if _OLLAMA_SEED_ENV else None
 MAX_TURNS      = 20
 LOG_DIR        = Path("logs/eval_grpo")
 TEMPERATURE    = 0.3   # overridden by --temp CLI flag
@@ -56,6 +59,12 @@ def _mcp_url_for(sampleid: str) -> str:
         return MCP_URL
     port = MCP_BASE_PORT + (zlib.crc32((sampleid or "").encode()) % MCP_N_WORKERS)
     return f"http://localhost:{port}/mcp"
+
+
+def _seed_for_item(base_seed: int | None, item_id: str, rep: int) -> int | None:
+    if base_seed is None:
+        return None
+    return int(base_seed + (zlib.crc32((item_id or "").encode()) % 1_000_000) + rep)
 
 # ── vLLM 백엔드 (--vllm) — main()에서 세팅하는 모듈 글로벌 ──
 EXECUTE_ONLY = False   # --execute-only: 모델에 execute_pipeline_code 도구만 노출
@@ -85,7 +94,11 @@ TOOLS = [
     }},
     {"type": "function", "function": {
         "name": "get_astar_graph_summary",
-        "description": "Per-cluster top edges from the conservative DoRothEA TF→Target graph (sorted by score). Call after run_astar_pipeline.",
+        "description": (
+            "Per-cluster top edges from the conservative DoRothEA TF→Target graph. Call after run_astar_pipeline. "
+            "Edges are sorted by normalized score. mean_beta and score are 0-1 normalized; "
+            "mean_beta_raw and score_raw preserve the original expression-scale values."
+        ),
         "parameters": {"type": "object", "properties": {
             "sampleid":   {"type": "string",  "description": "Sample ID"},
             "cluster_id": {"type": "string",  "description": "Cluster ID"},
@@ -96,10 +109,9 @@ TOOLS = [
         "name": "get_astar_cellular_info",
         "description": (
             "Cell-specific DoRothEA TF→Target edges for one cell, recomputed from that cell's expression. "
-            "Returns BOTH cellular_beta (this cell's own activation, sqrt|w + alpha_i_cell + alpha_j_cell|) "
-            "and mean_beta (the cluster baseline) per edge in a single call — compare them to see whether "
-            "the cell activates an edge above its cluster average (cellular_beta > mean_beta = "
-            "cell-specific activation)."
+            "Returns normalized cellular_beta and normalized mean_beta on the same cluster scale, plus "
+            "cellular_beta_raw and mean_beta_raw for original expression-scale values. Compare normalized "
+            "cellular_beta > mean_beta to see whether the cell activates an edge above its cluster average."
         ),
         "parameters": {"type": "object", "properties": {
             "sampleid":    {"type": "string",  "description": "Sample ID"},
@@ -153,8 +165,9 @@ TOOLS = [
         "name": "execute_pipeline_code",
         "description": "Execute Python code with adata, cluster_graphs, kegg_pathways, etc. in namespace.",
         "parameters": {"type": "object", "properties": {
-            "sampleid": {"type": "string", "description": "Sample ID"},
-            "code":     {"type": "string", "description": "Python code to execute"},
+            "sampleid":    {"type": "string",  "description": "Sample ID"},
+            "code":        {"type": "string",  "description": "Python code to execute"},
+            "timeout_sec": {"type": "integer", "description": "Best-effort execution timeout in seconds (default 150; 0 disables)."},
         }, "required": ["sampleid", "code"]},
     }},
     {"type": "function", "function": {
@@ -594,12 +607,21 @@ async def call_mcp_tool(tool_name: str, args: dict, mcp_url: str | None = None) 
 
 # ─── Ollama generate ──────────────────────────────────────────────────────────
 
-async def ollama_generate(messages: list, model: str, max_tokens: int) -> dict:
+async def ollama_generate(messages: list, model: str, max_tokens: int, seed: int | None = None) -> dict:
     """
     Ollama /api/chat 호출. 반환: {"role", "content", "tool_calls"?}
     500 오류(context 초과 등) 시 빈 메시지 반환해 루프를 종료시킴.
     """
     async with httpx.AsyncClient(timeout=300) as http:
+        options = {
+            "temperature":    TEMPERATURE,
+            "top_p":          0.9,
+            "repeat_penalty": 1.05,
+            "num_ctx":        OLLAMA_NUM_CTX,
+            "num_predict":    max_tokens,
+        }
+        if seed is not None:
+            options["seed"] = int(seed)
         resp = await http.post(
             f"{OLLAMA_API_URL}/api/chat",
             json={
@@ -608,12 +630,7 @@ async def ollama_generate(messages: list, model: str, max_tokens: int) -> dict:
                 "tools":    TOOLS,
                 "stream":   False,
                 "think":    True,
-                "options": {
-                    "temperature":    TEMPERATURE,
-                    "top_p":          0.9,
-                    "repeat_penalty": 1.05,
-                    "num_predict":    max_tokens,
-                },
+                "options":  options,
             },
         )
         if resp.status_code >= 500:
@@ -623,9 +640,18 @@ async def ollama_generate(messages: list, model: str, max_tokens: int) -> dict:
         return resp.json()["message"]
 
 
-async def ollama_generate_no_tools(messages: list, model: str, max_tokens: int) -> dict:
+async def ollama_generate_no_tools(messages: list, model: str, max_tokens: int, seed: int | None = None) -> dict:
     """force-final용. tools 파라미터 없이 generate → 모델이 도구 못 부르고 텍스트만 생성."""
     async with httpx.AsyncClient(timeout=300) as http:
+        options = {
+            "temperature":    TEMPERATURE,
+            "top_p":          0.9,
+            "repeat_penalty": 1.05,
+            "num_ctx":        OLLAMA_NUM_CTX,
+            "num_predict":    max_tokens,
+        }
+        if seed is not None:
+            options["seed"] = int(seed)
         resp = await http.post(
             f"{OLLAMA_API_URL}/api/chat",
             json={
@@ -633,12 +659,7 @@ async def ollama_generate_no_tools(messages: list, model: str, max_tokens: int) 
                 "messages": messages,
                 "stream":   False,
                 "think":    True,
-                "options": {
-                    "temperature":    TEMPERATURE,
-                    "top_p":          0.9,
-                    "repeat_penalty": 1.05,
-                    "num_predict":    max_tokens,
-                },
+                "options":  options,
             },
         )
         if resp.status_code >= 500:
@@ -799,10 +820,9 @@ async def vllm_generate(prompt_text: str, max_tokens) -> str:
 # ─── Run one item ─────────────────────────────────────────────────────────────
 
 _RESET_CODE = """\
-# ── 세션 초기화: 이전 실행이 adata.obs에 추가한 컬럼 제거 ──────────────────
+# ── 세션 초기화: 이전 실행이 adata.obs에 추가한 컬럼과 평가 누수 컬럼 제거 ─────
 import json as _json
-_KEEP_PREFIX = ('n_genes', 'n_counts', 'leiden', 'louvain', 'H-L', 'class',
-                'GRIA2_grad', 'total_counts', 'pct_counts', 'doublet')
+_KEEP_PREFIX = ('n_genes', 'n_counts', 'total_counts', 'pct_counts', 'doublet')
 _KEGG_MARKER = (' signaling', ' cancer', ' disease', ' infection',
                 'pathway', 'metabolism', 'Amyo', 'Kaposi', 'FoxO',
                 'Aldosterone', 'Colorectal', 'Viral', 'Inflammatory',
@@ -820,6 +840,13 @@ if _drop:
     print(f'[reset] dropped {len(_drop)} computed columns: {_drop[:8]}')
 else:
     print('[reset] obs clean — no computed columns found')
+_UNS_LEAK = ('cell_type_colors', 'leiden', 'leiden_colors', 'louvain',
+             'louvain_colors', 'class_colors', 'annotation')
+_uns_drop = [k for k in _UNS_LEAK if k in adata.uns]
+for _k in _uns_drop:
+    adata.uns.pop(_k, None)
+if _uns_drop:
+    print(f'[reset] dropped uns leak keys: {_uns_drop[:8]}')
 print(f'[reset] obs columns now: {list(adata.obs.columns)[:10]}')
 """
 
@@ -829,6 +856,7 @@ async def _run_item_inner(
     use_ollama: bool, ollama_model: str,
     hf_model=None, hf_tok=None,
     system_prompt: str | None = None,
+    ollama_seed: int | None = None,
 ) -> dict:
     sampleid = item["sampleid"]
     mcp_url  = _mcp_url_for(sampleid)   # sticky: 같은 sampleid=같은 서버
@@ -876,7 +904,7 @@ async def _run_item_inner(
             text_content = extract_text_content(raw)
             thinking     = extract_thinking(raw)
         elif use_ollama:
-            message      = await ollama_generate(messages, ollama_model, max_tokens)
+            message      = await ollama_generate(messages, ollama_model, max_tokens, seed=ollama_seed)
             elapsed_gen  = time.time() - t_gen
             tool_calls   = parse_ollama_tool_calls(message)
             text_content = message.get("content", "") or ""
@@ -1010,7 +1038,7 @@ async def _run_item_inner(
             trajectory.append({"turn": max_turns+1, "type": "text", "content": final_text, "thinking": final_think})
         elif use_ollama:
             messages.append({"role": "user", "content": _force})
-            final_msg     = await ollama_generate_no_tools(messages, ollama_model, max_tokens)
+            final_msg     = await ollama_generate_no_tools(messages, ollama_model, max_tokens, seed=ollama_seed)
             final_text    = final_msg.get("content", "") or ""
             final_think   = final_msg.get("thinking", "") or ""
             print(f"  [force-final] → {final_text[:120]}")
@@ -1041,6 +1069,7 @@ async def _run_item_inner(
         "n_tool_calls": len(tools_called),
         "elapsed_sec":  round(elapsed, 1),
         "timed_out":    False,
+        "ollama_seed":  ollama_seed,
         "trajectory":   trajectory,
         **scoring,
     }
@@ -1049,11 +1078,12 @@ async def _run_item_inner(
 async def run_item(item: dict, max_turns: int, max_tokens: int,
                    use_ollama: bool, ollama_model: str,
                    hf_model=None, hf_tok=None,
-                   system_prompt: str | None = None) -> dict:
+                   system_prompt: str | None = None,
+                   ollama_seed: int | None = None) -> dict:
     try:
         return await asyncio.wait_for(
             _run_item_inner(item, max_turns, max_tokens, use_ollama, ollama_model,
-                            hf_model, hf_tok, system_prompt),
+                            hf_model, hf_tok, system_prompt, ollama_seed),
             timeout=ITEM_TIMEOUT_SEC,
         )
     except asyncio.TimeoutError:
@@ -1071,6 +1101,7 @@ async def run_item(item: dict, max_turns: int, max_tokens: int,
             "n_tool_calls":    0,
             "elapsed_sec":     float(ITEM_TIMEOUT_SEC),
             "timed_out":       True,
+            "ollama_seed":     ollama_seed,
             "score":           0.0,
             "score_raw":       0.0,
             "penalty_applied": False,
@@ -1165,6 +1196,8 @@ async def main():
                    help="vLLM max_model_len (default 16384)")
     p.add_argument("--temp",          type=float, default=TEMPERATURE,
                    help=f"sampling temperature for Ollama/HF (default {TEMPERATURE})")
+    p.add_argument("--seed",          type=int,   default=OLLAMA_SEED,
+                   help="Base Ollama seed. If set, each item/repeat uses deterministic seed = base + crc32(item_id) + repeat.")
     p.add_argument("--kg-guided",     action="store_true",
                    help="KG 워크플로우 강제 (gbm_neural_topn 전용 system prompt 사용)")
     p.add_argument("--test-prompt",   action="store_true",
@@ -1178,6 +1211,8 @@ async def main():
 
     TEMPERATURE = args.temp
     print(f"[temp] temperature={TEMPERATURE}")
+    if args.seed is not None:
+        print(f"[seed] base={args.seed} mode=item_id+repeat")
 
     items = [json.loads(l) for l in Path(args.jsonl).read_text().splitlines() if l.strip()]
     if args.filter_id:
@@ -1284,9 +1319,9 @@ async def main():
         hf_model.eval()
         label = ("BASE" if args.base_only else args.ckpt) + ("_kgguided" if args.kg_guided else "")
 
-    # MCP 연결 확인
+    # MCP 연결 확인 (NO_KG: KG 도구 대신 execute_pipeline_code로 핑 — KG graphml 의존 제거)
     print("\n[MCP] Testing connection...")
-    ping = await call_mcp_tool("get_kg_context", {"genes": [], "keywords": "test", "top_n": 1})
+    ping = await call_mcp_tool("execute_pipeline_code", {"sampleid": items[0]["sampleid"], "code": "print('ping')"})
     try:
         if json.loads(ping).get("success") is False:
             print(f"[MCP] 연결 실패: {ping[:200]}")
@@ -1310,10 +1345,12 @@ async def main():
     async def _run_one(item, rep):
         mcp_url = _mcp_url_for(item["sampleid"])
         await call_mcp_tool("reset_pipeline_namespace", {"sampleid": item["sampleid"]}, mcp_url=mcp_url)
+        ollama_seed = _seed_for_item(args.seed, item.get("id", item["sampleid"]), rep)
         result = await run_item(
             item, args.max_turns, args.max_tokens,
             use_ollama, ollama_model, hf_model, hf_tok,
             system_prompt=active_system_prompt,
+            ollama_seed=ollama_seed,
         )
         if n_repeats > 1:
             result["repeat"] = rep
