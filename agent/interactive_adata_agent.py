@@ -11,11 +11,16 @@ Ollama does not execute Python. This script:
 from __future__ import annotations
 
 import argparse
+from datetime import datetime
 import json
 import os
 import re
+import select
 import sys
+import termios
+import threading
 import time
+import tty
 import urllib.error
 import urllib.request
 from pathlib import Path
@@ -53,6 +58,106 @@ NO_SAMPLEID_TOOLS = {
     "score_context_subgraph",
     "synthesize_context_kg_paths",
 }
+
+
+def safe_filename_part(value: str) -> str:
+    safe = re.sub(r"[^A-Za-z0-9_.-]+", "_", value.strip())
+    return safe.strip("._") or "sample"
+
+
+class SessionLogger:
+    def __init__(self, path: Path, sampleid: str):
+        self.path = path
+        self.sampleid = sampleid
+        self.path.parent.mkdir(parents=True, exist_ok=True)
+        self.fh = self.path.open("a", encoding="utf-8")
+
+    def write(self, event: str, **payload: Any) -> None:
+        record = {
+            "ts": datetime.now().isoformat(timespec="seconds"),
+            "sampleid": self.sampleid,
+            "event": event,
+            **payload,
+        }
+        self.fh.write(json.dumps(record, ensure_ascii=False) + "\n")
+        self.fh.flush()
+
+    def close(self) -> None:
+        self.fh.close()
+
+
+class GuidingKeyWatcher:
+    """Watch Ctrl-G during model/tool turns and request guidance at safe points."""
+
+    def __init__(self):
+        self.triggered = threading.Event()
+        self._stop = threading.Event()
+        self._thread = None
+        self._old_attrs = None
+        self.enabled = bool(getattr(sys.stdin, "isatty", lambda: False)())
+        self._fd = None
+
+    def __enter__(self):
+        self.start()
+        return self
+
+    def __exit__(self, exc_type, exc, tb):
+        self.stop()
+
+    def start(self) -> None:
+        if not self.enabled:
+            return
+        if self._thread is not None:
+            return
+        self._stop.clear()
+        self._fd = sys.stdin.fileno()
+        self._old_attrs = termios.tcgetattr(self._fd)
+        tty.setcbreak(self._fd)
+        self._thread = threading.Thread(target=self._watch, args=(self._fd,), daemon=True)
+        self._thread.start()
+
+    def stop(self) -> None:
+        if not self.enabled:
+            return
+        self._stop.set()
+        if self._thread is not None:
+            self._thread.join(timeout=0.2)
+            self._thread = None
+        if self._old_attrs is not None:
+            termios.tcsetattr(sys.stdin.fileno(), termios.TCSADRAIN, self._old_attrs)
+            self._old_attrs = None
+        self._drain_pending_input()
+
+    def _watch(self, fd: int) -> None:
+        while not self._stop.is_set():
+            readable, _, _ = select.select([fd], [], [], 0.1)
+            if not readable:
+                continue
+            ch = os.read(fd, 1)
+            if ch == b"\x07":  # Ctrl-G / BEL
+                self.triggered.set()
+
+    def _drain_pending_input(self) -> None:
+        if self._fd is None:
+            return
+        try:
+            while select.select([self._fd], [], [], 0)[0]:
+                os.read(self._fd, 1)
+        except OSError:
+            pass
+
+    def pop_triggered(self) -> bool:
+        if not self.triggered.is_set():
+            return False
+        self.triggered.clear()
+        return True
+
+    def prompt_guidance(self, messages: list[dict], logger: "SessionLogger | None") -> bool:
+        self.stop()
+        try:
+            return inject_guiding_message(messages, logger)
+        finally:
+            self.start()
 
 
 def post_json(url: str, payload: dict, timeout: int = 600) -> dict:
@@ -193,13 +298,23 @@ def truncate_text(text: str, max_chars: int) -> str:
     return text[:head] + f"\n...[truncated {len(text) - max_chars} chars]...\n" + text[-tail:]
 
 
-def ollama_chat(ollama_url: str, model: str, messages: list[dict], num_ctx: int, temperature: float) -> dict:
+def ollama_chat(
+    ollama_url: str,
+    model: str,
+    messages: list[dict],
+    num_ctx: int,
+    temperature: float,
+    seed: int | None = None,
+) -> dict:
+    options = {"num_ctx": num_ctx, "temperature": temperature, "top_p": 0.9}
+    if seed is not None:
+        options["seed"] = int(seed)
     payload = {
         "model": model,
         "messages": messages,
         "tools": TOOLS,
         "stream": False,
-        "options": {"num_ctx": num_ctx, "temperature": temperature, "top_p": 0.9},
+        "options": options,
     }
     return post_json(f"{ollama_url.rstrip('/')}/api/chat", payload)
 
@@ -235,6 +350,27 @@ def read_user_line(prompt_text: str) -> str:
     return input(prompt_text)
 
 
+def read_startup_message(args: argparse.Namespace) -> str:
+    if args.startup_message_file:
+        return Path(args.startup_message_file).expanduser().read_text(encoding="utf-8").strip()
+    return args.startup_message.strip()
+
+
+def inject_guiding_message(messages: list[dict], logger: SessionLogger | None) -> bool:
+    print()
+    directive = read_user_line("[Guiding Message] : ").strip()
+    if not directive:
+        print("[agent] empty guiding message; continuing.")
+        return False
+    injected = f"[Guiding Message] : {directive}"
+    print(injected)
+    messages.append({"role": "user", "content": injected})
+    if logger:
+        logger.write("guiding_message", content=directive)
+        logger.write("ctrl_g_guiding_message", content=directive, injected=injected)
+    return True
+
+
 def main() -> None:
     p = argparse.ArgumentParser()
     p.add_argument("--model", default=os.getenv("OLLAMA_MODEL", "qwen35-grpo-step9"))
@@ -243,18 +379,49 @@ def main() -> None:
     p.add_argument("--sampleid", required=True)
     p.add_argument("--num-ctx", type=int, default=int(os.getenv("NUM_CTX", "32000")))
     p.add_argument("--temperature", type=float, default=float(os.getenv("TEMPERATURE", "1.0")))
+    _seed_env = os.getenv("OLLAMA_SEED", "").strip()
+    p.add_argument("--seed", type=int, default=(int(_seed_env) if _seed_env else None))
     p.add_argument("--max-tool-turns", type=int, default=30)
     p.add_argument("--tool-response-max-chars", type=int, default=20000)
     p.add_argument("--show-thinking", action="store_true")
     p.add_argument("--allow-sample-switch", action="store_true")
-    p.add_argument("--log", default="")
+    p.add_argument("--log", default=os.getenv("ANALYSIS_LOG", ""))
+    p.add_argument("--log-dir", default=os.getenv("ANALYSIS_LOG_DIR", str(Path(__file__).resolve().parents[1] / "analysis_logs")))
+    p.add_argument("--no-log", action="store_true")
+    p.add_argument("--startup-message", default=os.getenv("STARTUP_MESSAGE", ""))
+    p.add_argument("--startup-message-file", default=os.getenv("STARTUP_MESSAGE_FILE", ""))
     args = p.parse_args()
+    startup_message = read_startup_message(args)
+
+    logger = None
+    if not args.no_log:
+        if args.log:
+            log_path = Path(args.log).expanduser()
+        else:
+            stamp = datetime.now().strftime("%Y%m%d_%H%M%S")
+            sample_part = safe_filename_part(args.sampleid)
+            log_path = Path(args.log_dir).expanduser() / f"{sample_part}_{stamp}.jsonl"
+        logger = SessionLogger(log_path, args.sampleid)
+        logger.write(
+            "session_start",
+            model=args.model,
+            ollama_url=args.ollama_url,
+            mcp_url=args.mcp_url,
+            num_ctx=args.num_ctx,
+            max_tool_turns=args.max_tool_turns,
+            ollama_seed=args.seed,
+        )
+        if startup_message:
+            logger.write("startup_message", content=startup_message)
 
     mcp = MCPClient(args.mcp_url)
     mcp.initialize()
     print(f"[mcp] connected: {args.mcp_url}")
     print(f"[mcp] reset sample: {args.sampleid}")
-    print(mcp.call("reset_pipeline_namespace", {"sampleid": args.sampleid})[:1000])
+    reset_result = mcp.call("reset_pipeline_namespace", {"sampleid": args.sampleid})
+    print(reset_result[:1000])
+    if logger:
+        logger.write("mcp_reset", result=truncate_text(reset_result, args.tool_response_max_chars))
 
     messages = [
         {"role": "system", "content": SYSTEM_PROMPT_NOKG},
@@ -267,67 +434,104 @@ def main() -> None:
             ),
         },
     ]
+    if logger:
+        logger.write("system_prompt", content=SYSTEM_PROMPT_NOKG)
+        logger.write("session_context", content=messages[1]["content"])
+    if startup_message:
+        print("\n[startup message]\n" + startup_message + "\n")
+        messages.append({
+            "role": "user",
+            "content": f"[Startup Message] : {startup_message}",
+        })
 
-    log_fh = open(args.log, "a") if args.log else None
-    print("\nType questions. Use 'exit' or 'quit' to stop.\n")
+    if logger:
+        print(f"[log] writing session: {logger.path}")
+    print("\nType questions. Use 'exit' or 'quit' to stop. During tool/model turns, press Ctrl-G to queue a guiding message.\n")
     try:
         while True:
             user_text = read_user_line("adata> ").strip()
             if user_text.lower() in {"exit", "quit"}:
+                if logger:
+                    logger.write("session_end", reason=user_text.lower())
                 break
             if not user_text:
                 continue
             messages.append({"role": "user", "content": user_text})
+            if logger:
+                logger.write("user", content=user_text)
+                logger.write("question", content=user_text)
 
-            for _ in range(args.max_tool_turns):
-                try:
-                    out = ollama_chat(args.ollama_url, args.model, messages, args.num_ctx, args.temperature)
-                    msg = out.get("message", {})
-                    thinking, content = extract_thinking(out, msg)
-                    if args.show_thinking and thinking:
-                        print("\nthinking>\n" + thinking.strip() + "\n")
-                    if content.strip():
-                        print("\nassistant>\n" + content.strip() + "\n")
-                    messages.append(msg)
+            with GuidingKeyWatcher() as guide:
+                for _ in range(args.max_tool_turns):
+                    try:
+                        if guide.pop_triggered() and guide.prompt_guidance(messages, logger):
+                            continue
+                        out = ollama_chat(args.ollama_url, args.model, messages, args.num_ctx, args.temperature, seed=args.seed)
+                        msg = out.get("message", {})
+                        thinking, content = extract_thinking(out, msg)
+                        if args.show_thinking and thinking:
+                            print("\nthinking>\n" + thinking.strip() + "\n")
+                        if thinking and logger:
+                            logger.write("thinking", content=thinking.strip())
+                        if content.strip():
+                            print("\nassistant>\n" + content.strip() + "\n")
+                            if logger:
+                                logger.write("assistant", content=content.strip())
+                        messages.append(msg)
 
-                    calls = extract_tool_calls(msg)
-                    if not calls:
+                        if guide.pop_triggered() and guide.prompt_guidance(messages, logger):
+                            continue
+
+                        calls = extract_tool_calls(msg)
+                        if not calls:
+                            break
+
+                        for call in calls:
+                            name = call["name"]
+                            arguments = call.get("arguments") or {}
+                            if isinstance(arguments, dict) and name not in NO_SAMPLEID_TOOLS:
+                                old_sampleid = arguments.get("sampleid")
+                                arguments["sampleid"] = args.sampleid
+                                if args.allow_sample_switch and old_sampleid:
+                                    arguments["sampleid"] = old_sampleid
+                                elif old_sampleid and old_sampleid != args.sampleid:
+                                    print(f"[agent] overriding sampleid: {old_sampleid} -> {args.sampleid}")
+                            print(f"[tool_call] {name}({json.dumps(arguments, ensure_ascii=False)})")
+                            if logger:
+                                logger.write("tool_call", name=name, arguments=arguments)
+                            result = mcp.call(name, arguments)
+                            result_short = truncate_text(result, args.tool_response_max_chars)
+                            print(f"[tool_response] {result_short}\n")
+                            if logger:
+                                logger.write("tool_response", name=name, content=result_short)
+                            append_tool_response(messages, name, result_short)
+                            if guide.pop_triggered() and guide.prompt_guidance(messages, logger):
+                                break
+                    except KeyboardInterrupt:
+                        print("[agent] interrupted; returning to prompt.")
+                        if logger:
+                            logger.write("interrupt")
                         break
-
-                    for call in calls:
-                        name = call["name"]
-                        arguments = call.get("arguments") or {}
-                        if isinstance(arguments, dict) and name not in NO_SAMPLEID_TOOLS:
-                            old_sampleid = arguments.get("sampleid")
-                            arguments["sampleid"] = args.sampleid
-                            if args.allow_sample_switch and old_sampleid:
-                                arguments["sampleid"] = old_sampleid
-                            elif old_sampleid and old_sampleid != args.sampleid:
-                                print(f"[agent] overriding sampleid: {old_sampleid} -> {args.sampleid}")
-                        print(f"[tool_call] {name}({json.dumps(arguments, ensure_ascii=False)})")
-                        result = mcp.call(name, arguments)
-                        result_short = truncate_text(result, args.tool_response_max_chars)
-                        print(f"[tool_response] {result_short}\n")
-                        append_tool_response(messages, name, result_short)
-                except KeyboardInterrupt:
-                    print()
-                    directive = read_user_line("[Directing Message] : ").strip()
-                    if directive:
-                        injected = f"[Directing Message] : {directive}"
-                        print(injected)
-                        messages.append({"role": "user", "content": injected})
-                        continue
-                    print("[agent] interrupted; returning to prompt.")
-                    break
-
-                if log_fh:
-                    log_fh.write(json.dumps({"messages": messages[-6:]}, ensure_ascii=False) + "\n")
-                    log_fh.flush()
-            else:
-                print("[agent] max tool turns reached; ask a follow-up or request a final summary.")
+                    except Exception as exc:
+                        msg = f"{type(exc).__name__}: {exc}"
+                        print(f"[agent] error; returning to prompt.\n{msg}")
+                        if logger:
+                            logger.write("error", error=msg)
+                        messages.append({
+                            "role": "user",
+                            "content": (
+                                "[Agent Runtime Error] The previous model/tool turn failed: "
+                                f"{msg}. Continue with corrected tool-call syntax."
+                            ),
+                        })
+                        break
+                else:
+                    print("[agent] max tool turns reached; ask a follow-up or request a final summary.")
+                    if logger:
+                        logger.write("max_tool_turns_reached")
     finally:
-        if log_fh:
-            log_fh.close()
+        if logger:
+            logger.close()
 
 
 if __name__ == "__main__":

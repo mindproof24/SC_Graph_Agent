@@ -10,12 +10,7 @@ Large assets are intentionally not tracked:
 
 - `qwen35-grpo-step9-Q4_K_M.gguf`
 - `.h5ad` datasets
-- DoRothEA data caches
-
-The KEGG parser is not pulled from PyPI. This repository vendors the modified
-`keggx` source under `vendor/keggx`, including the human and mouse KGML files
-used by the MCP KEGG tools. `requirements.txt` installs that local package with
-`-e ./vendor/keggx`.
+- KEGG/DoRothEA data caches
 
 ## Layout
 
@@ -58,35 +53,10 @@ Expected examples:
 
 ```text
 data/<sampleid>.h5ad
+data/KEGG_Graph_processing/*.kgml
+data/KEGG_Graph_processing/mmu/*.kgml
 data/dorothea_ABC_human.parquet
 data/dorothea_ABC_mouse.parquet
-```
-
-KEGG requirements:
-
-- Human and mouse KGML files are included in `vendor/keggx/keggx/data/KEGG_Graph_processing`.
-- The server uses packaged KEGG data by default when `data/KEGG_Graph_processing` is absent.
-- Set `KEGG_DIR=/path/to/KEGG_Graph_processing` only when intentionally overriding the packaged data.
-
-Verify packaged KEGG data:
-
-```bash
-python - <<'PY'
-from pathlib import Path
-from importlib.resources import files
-from keggx import KEGG
-
-base = Path(str(files("keggx").joinpath("data", "KEGG_Graph_processing")))
-human = sorted(base.glob("hsa*.kgml"))
-mouse = sorted((base / "mmu").glob("mmu*.kgml"))
-print(f"human KGML: {len(human)}")
-print(f"mouse KGML: {len(mouse)}")
-assert human, "missing packaged human KGML files"
-assert mouse, "missing packaged mouse KGML files"
-KEGG(KGML_file=str(human[0]))
-KEGG(KGML_file=str(mouse[0]))
-print("keggx parse ok")
-PY
 ```
 
 You can override paths:
@@ -136,8 +106,8 @@ TOOL_RESPONSE_MAX_CHARS=12000 \
 bash agent/run_interactive.sh my_sample
 ```
 
-During a turn, press `Ctrl-C` once to inject a direction message without killing the agent.
+During a model/tool turn, press `Ctrl-G` to queue a guiding message at the next safe point.
 
 ```text
-[Directing Message] : This dataset is mouse. Use organism="mouse".
+[Guiding Message] : This dataset is mouse. Use organism="mouse".
 ```
