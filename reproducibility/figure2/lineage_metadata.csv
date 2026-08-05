@@ -1,0 +1,7 @@
+lineage,n_cells,kegg,n_edges_generic,n_edges_curated,n_edges_aug
+T cell CD4,9939,T cell receptor signaling pathway,107,10,31
+T cell CD8,7023,T cell receptor signaling pathway,107,10,31
+B cell,3365,B cell receptor signaling pathway,61,10,55
+NK cell,3112,Natural killer cell mediated cytotoxicity,111,10,55
+Macrophage,15305,Fc gamma R-mediated phagocytosis,56,10,46
+cDC,2796,Antigen processing and presentation,16,10,31

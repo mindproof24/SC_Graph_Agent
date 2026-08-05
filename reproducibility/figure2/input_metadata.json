@@ -1,0 +1,22 @@
+{
+  "h5ad": "data/Lung_cancer_Imm_filtered.h5ad",
+  "file_size_bytes": 2160222148,
+  "n_cells": 50000,
+  "n_genes": 17764,
+  "celltype_column": "cell_type_predicted",
+  "feature_column": "feature_name",
+  "label_matching": "case-insensitive literal substring",
+  "dataset_title": "The single-cell lung cancer atlas (LuCA) -- core atlas",
+  "dataset_citation": "Publication: https://doi.org/10.1016/j.ccell.2022.10.008 Dataset Version: https://datasets.cellxgene.cziscience.com/c1870f1f-ca36-4d96-b03b-7dc0e96d83ee.h5ad curated and distributed by CZ CELLxGENE Discover in Collection: https://cellxgene.cziscience.com/collections/edb893ee-4066-4128-9aec-5eb2b03f8287",
+  "kegg_directory": "vendor/keggx/keggx/data/KEGG_Graph_processing",
+  "minimum_pathway_genes": 5,
+  "curated_edge_budget": 10,
+  "requested_lineages": [
+    "T cell CD4",
+    "T cell CD8",
+    "B cell",
+    "NK cell",
+    "Macrophage",
+    "cDC"
+  ]
+}
