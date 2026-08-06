@@ -7,11 +7,11 @@ searching through all logs again.
 
 ## Files
 
-| File | Original source | Role in Figure 4 interpretation |
-|---|---|---|
-| `main_cluster18_lymphoid_bcell_apc_dissection_20260716_111025.jsonl` | `SC_Graph_Agent/analysis_logs/figure_20260716_111025.jsonl` | Main trajectory for the cluster 18 lymphoid dissection. It identifies cluster 18 as lymphocyte enriched, tests memory-like T, NK-like, NKT-like and APC-like modules, then follows the B-cell/APC question using observed genes only. |
-| `explicit_cluster18_t_nk_nkt_bapc_dissection_20260715_174514.jsonl` | `SC_Graph_Agent/analysis_logs/figure_20260715_174514.jsonl` | Explicit trajectory where the guidance asks not to assign a single cell type to cluster 18 and to test separable T-cell, NK/cytotoxic, NKT-like and B-cell/APC-like subprograms. This is the clearest log for the heterogeneous-lymphoid framing. |
-| `supporting_cluster18_t_nk_nkt_apc_dissection_20260716_003656.jsonl` | `SC_Graph_Agent/analysis_logs/figure_20260716_003656.jsonl` | Supporting trajectory that also redirects analysis to cluster 18 and builds T-cell, NK/cytotoxic-like, NKT-like and APC-like custom edge modules. |
+| File | Role in Figure 4 interpretation |
+|---|---|
+| `main_cluster18_lymphoid_bcell_apc_dissection_20260716_111025.jsonl` | Main trajectory for the cluster 18 lymphoid dissection. It identifies cluster 18 as lymphocyte enriched, tests memory-like T, NK-like, NKT-like and APC-like modules, then follows the B-cell/APC question using observed genes only. |
+| `explicit_cluster18_t_nk_nkt_bapc_dissection_20260715_174514.jsonl` | Explicit trajectory where the guidance asks not to assign a single cell type to cluster 18 and to test separable T-cell, NK/cytotoxic, NKT-like and B-cell/APC-like subprograms. This is the clearest log for the heterogeneous-lymphoid framing. |
+| `supporting_cluster18_t_nk_nkt_apc_dissection_20260716_003656.jsonl` | Supporting trajectory that also redirects analysis to cluster 18 and builds T-cell, NK/cytotoxic-like, NKT-like and APC-like custom edge modules. |
 
 ## Key Anchors
 
