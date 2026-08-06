@@ -89,7 +89,6 @@ python reproducibility/figure3/scripts/benchmark_tf_target_tool.py \
   --data-dir data \
   --samples imm_atlas_TT_p01 \
   --clusters 0,1,2,3,6,9,10 \
-  --methods astar_path \
   --leiden-key leiden \
   --gene-col n_genes \
   --embedding-key X_phate \
@@ -101,6 +100,11 @@ python reproducibility/figure3/scripts/benchmark_tf_target_tool.py \
 This writes one `*__edges.csv` file per cluster and
 `work/figure3/astar/benchmark_summary.csv`.
 
+The deposited ranked-edge table is the record used for the reported figure.
+The current A*/Rust path search is not bitwise deterministic across repeated
+runs, so raw recomputation can produce small differences in retained paths,
+edge membership and scores even with identical command-line settings.
+
 ### 2. SCENIC inference and context pruning
 
 ```bash
@@ -110,9 +114,12 @@ python reproducibility/figure3/scripts/run_scenic_for_astar_clusters.py \
   --benchmark-summary work/figure3/astar/benchmark_summary.csv \
   --collectri path/to/collectri_human.csv \
   --clusters 0,1,2,3,6,9,10 \
-  --rankings path/to/hg38_ranking_database.feather \
+  --max-genes 0 \
+  --rankings \
+    path/to/hg38_10kbp_up_10kbp_down.rankings.feather \
+    path/to/hg38_500bp_up_100bp_down.rankings.feather \
   --annotations path/to/motifs-v10nr_clust-nr.hgnc-m0.001-o0.0.tbl \
-  --num-workers 4 \
+  --num-workers 24 \
   --seed 13 \
   --out-dir work/figure3/scenic
 ```
@@ -179,6 +186,12 @@ verification files are:
 - `cluster_identity_top10_edges_3methods.csv`: representative high-ranking
   edges used for biological interpretation;
 - `run_metadata.json`: benchmark scope and record counts.
+
+The first four comparison tables in this list are generated directly by
+`benchmark_collectri_methods.py`. The runtime tables were assembled from the
+A*, SCENIC and CellOracle per-cluster timing summaries, and the representative
+cluster-identity table is a biological interpretation table. Standalone
+builders for those derived tables are not currently included in this folder.
 
 The deposited metadata records 42,990 CollecTRI pairs, 938,943 raw method
 edges and 23,112 retained method edges across the three workflows.
