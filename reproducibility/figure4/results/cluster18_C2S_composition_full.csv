@@ -1,0 +1,22 @@
+C2S_celltype_final,count,percent_of_cluster18
+T cell,201,47.86
+mature NK T cell,75,17.86
+progenitor cell,30,7.14
+mature T cell,27,6.43
+B cell,23,5.48
+leukocyte,17,4.05
+natural killer cell,16,3.81
+"CD4-positive, alpha-beta memory T cell",5,1.19
+"CD4-positive, alpha-beta T cell",5,1.19
+"CD8-positive, alpha-beta cytotoxic T cell",5,1.19
+macrophage,2,0.48
+native cell,2,0.48
+"CD4-positive, alpha-beta cytotoxic T cell",2,0.48
+malignant cell,2,0.48
+"CD8-positive, alpha-beta T cell",2,0.48
+CD4-positive helper T cell,1,0.24
+hematopoietic stem cell,1,0.24
+"CD8-positive, alpha-beta memory T cell",1,0.24
+plasma cell,1,0.24
+innate lymphoid cell,1,0.24
+natural T-regulatory cell,1,0.24
