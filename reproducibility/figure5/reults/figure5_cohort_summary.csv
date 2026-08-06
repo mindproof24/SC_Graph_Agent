@@ -1,0 +1,5 @@
+setting,model,n,visible_strict,visible_lineage,final_strict,final_lineage,context
+16k,base,15,0.317,0.533,0.217,0.383,1.133
+16k,trained,15,0.333,0.467,0.25,0.467,1.133
+32k,base,15,0.633,0.8,0.533,0.733,1.733
+32k,trained,15,0.633,0.783,0.483,0.7,1.867

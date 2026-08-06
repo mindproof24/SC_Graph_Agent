@@ -1,0 +1,5 @@
+cluster,majority_label,majority_fraction,n_cells
+0,microglial cell,0.7664066085360257,2179
+12,microglial cell,0.5053598774885145,653
+18,T cell,0.4785714285714286,420
+3,microglial cell,0.7654245571166769,1637
