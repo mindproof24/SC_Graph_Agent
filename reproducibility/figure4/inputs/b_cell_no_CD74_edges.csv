@@ -1,0 +1,4 @@
+pathway,source,target,weight,keep
+b_cell_no_CD74,BANK1,CD22,1.0,True
+b_cell_no_CD74,EBF1,BANK1,0.9,True
+b_cell_no_CD74,CD37,CD22,0.8,True
