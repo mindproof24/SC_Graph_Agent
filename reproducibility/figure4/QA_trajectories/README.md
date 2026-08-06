@@ -9,9 +9,9 @@ searching through all logs again.
 
 | File | Role in Figure 4 interpretation |
 |---|---|
-| `main_cluster18_lymphoid_bcell_apc_dissection_20260716_111025.jsonl` | Main trajectory for the cluster 18 lymphoid dissection. It identifies cluster 18 as lymphocyte enriched, tests memory-like T, NK-like, NKT-like and APC-like modules, then follows the B-cell/APC question using observed genes only. |
-| `explicit_cluster18_t_nk_nkt_bapc_dissection_20260715_174514.jsonl` | Explicit trajectory where the guidance asks not to assign a single cell type to cluster 18 and to test separable T-cell, NK/cytotoxic, NKT-like and B-cell/APC-like subprograms. This is the clearest log for the heterogeneous-lymphoid framing. |
-| `supporting_cluster18_t_nk_nkt_apc_dissection_20260716_003656.jsonl` | Supporting trajectory that also redirects analysis to cluster 18 and builds T-cell, NK/cytotoxic-like, NKT-like and APC-like custom edge modules. |
+| `main_cluster18_lymphoid_bcell_apc_dissection_20260716_111025.jsonl` | Main trajectory for the cluster 18 lymphoid dissection. It identifies cluster 18 as lymphocyte enriched, tests memory-like T, NK, NKT and APC-like modules, then follows the B-cell/APC question using observed genes only. |
+| `explicit_cluster18_t_nk_nkt_bapc_dissection_20260715_174514.jsonl` | Explicit trajectory where the guidance asks not to assign a single cell type to cluster 18 and to test separable T-cell, NK/cytotoxic, NKT and B-cell/APC subprograms. This is the clearest log for the heterogeneous-lymphoid framing. |
+| `supporting_cluster18_t_nk_nkt_apc_dissection_20260716_003656.jsonl` | Supporting trajectory that also redirects analysis to cluster 18 and builds T-cell, NK/cytotoxic, NKT and APC custom edge modules. |
 
 ## Key Anchors
 
@@ -19,20 +19,20 @@ searching through all logs again.
   - `figure_20260716_111025.jsonl`, lines 53-54:
     Ctrl-G guidance restricts the analysis to cluster 18 and asks for
     `custom_pathway_calc(scale='cell', cluster_id='18', cluster_key='leiden')`
-    modules for memory-like T cells, NK-like cells, NKT-like cells and
-    APC-like signal.
+    modules for memory T cells, NK cells, NKT cells and
+    APC signal.
   - `figure_20260716_111025.jsonl`, lines 99-100:
     Ctrl-G guidance refines the B-cell/APC question by avoiding the generic
-    `CD74 -> HLA-DRA` edge and testing more B-cell-like edges.
+    `CD74 -> HLA-DRA` edge and testing more B-cell edges.
 
 - Explicit heterogeneous-lymphoid trajectory:
   - `figure_20260715_174514.jsonl`, lines 86-87:
     Ctrl-G guidance states that cluster 18 is lymphoid enriched and asks to
-    test separable T-cell, NK/cytotoxic, NKT-like and B-cell/APC-like
+    test separable T-cell, NK/cytotoxic, NKT and B-cell/APC
     subprograms at single-cell resolution.
   - `figure_20260715_174514.jsonl`, line 109:
-    The trajectory records a working subdivision of cluster 18 into NK-like,
-    T-cell, NKT-like and APC-like candidate groups.
+    The trajectory records a working subdivision of cluster 18 into NK,
+    T-cell, NKT and APC candidate groups.
 
 - Supporting trajectory:
   - `figure_20260716_003656.jsonl`, lines 60-61:
