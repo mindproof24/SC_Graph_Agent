@@ -1,0 +1,6 @@
+pathway,source,target,weight,keep
+b_cell_apc,BANK1,CD22,1.0,True
+b_cell_apc,EBF1,BANK1,0.9,True
+b_cell_apc,CD37,CD22,0.8,True
+b_cell_apc,CD74,HLA-DRA,0.7,True
+b_cell_apc,IGKC,CD74,0.6,True
