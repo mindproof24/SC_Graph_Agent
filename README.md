@@ -3,7 +3,7 @@
 Runtime package for interactive AnnData analysis with:
 
 - FastMCP AnnData tool server
-- PyO3/Rust kernels (`cwg_rust`) for A*/KEGG/custom-pathway scoring
+- PyO3/Rust kernels for A*/KEGG/custom-pathway scoring
 - Ollama Qwen3.5 GRPO step9 interactive command-line agent
 
 Large assets are intentionally not tracked:
@@ -12,21 +12,8 @@ Large assets are intentionally not tracked:
 - `.h5ad` datasets
 - KEGG/DoRothEA data caches
 
-KEGG KGML parsing uses a vendored and substantially modified derivative of
-[keggx v0.1.0](https://github.com/iamjli/keggx), originally developed by Johnny
-Li and distributed under the MIT License. The vendored parser adapts KGML
-relation processing, official gene-symbol mapping, group-node expansion, and
-server integration for the SC_Graph_Agent workflow. Attribution and license
-details are provided in `vendor/keggx/NOTICE` and `vendor/keggx/LICENSE`.
 
-## License
 
-SC_Graph_Agent source code is distributed under the MIT License; see
-[`LICENSE`](LICENSE). Third-party components retain their original licenses.
-The vendored keggx derivative is covered by the attribution and MIT license in
-`vendor/keggx/NOTICE` and `vendor/keggx/LICENSE`. KEGG data and KGML files are
-not relicensed by this repository and remain subject to the applicable KEGG
-terms of use.
 
 ## Layout
 
@@ -127,3 +114,12 @@ During a model/tool turn, press `Ctrl-G` to queue a guiding message at the next 
 ```text
 [Guiding Message] : This dataset is mouse. Use organism="mouse".
 ```
+
+## License
+
+SC_Graph_Agent source code is distributed under the MIT License; see
+[`LICENSE`](LICENSE). Third-party components retain their original licenses.
+The vendored keggx derivative is covered by the attribution and MIT license in
+`vendor/keggx/NOTICE` and `vendor/keggx/LICENSE`. KEGG data and KGML files are
+not relicensed by this repository and remain subject to the applicable KEGG
+terms of use.
