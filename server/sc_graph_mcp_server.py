@@ -1616,10 +1616,14 @@ async def custom_pathway_calc(
     cluster_ids: Optional[List[str]] = Field(None,
         description="Batch cluster ids for scale='cluster'. Use ['all'] for all clusters. Use null/omit for scale='cell'."),
     cell_ids:    Optional[List[str]] = Field(None,
-        description="Specific cells for scale='cell'. Null/empty -> return top-K ranking over all cells."),
+        description="Specific cells for scale='cell'. Null/empty -> return top-K ranking over all cells or over cluster_id/cluster_ids when provided."),
     cluster_key: str        = Field("leiden"),
     top_k:       int        = Field(10,
         description="When scale='cell' and cell_ids empty, return top_k cells by score."),
+    top:         Optional[int] = Field(None,
+        description="Deprecated alias for top_k."),
+    top_n:       Optional[int] = Field(None,
+        description="Deprecated alias for top_k."),
     name:        str        = Field("custom_pathway", description="Pathway name (informational)."),
     verbose:     bool       = Field(False,
         description="If True, include per-edge contribution breakdown (sorted desc) for each target cluster/cell."),
@@ -1643,7 +1647,8 @@ async def custom_pathway_calc(
       cluster + cluster_id        -> single score
       cluster + cluster_ids       -> {cid: score, ...} + ranked list
       cell    + cell_ids          -> {cell_id: score, ...}
-      cell    + (no cell_ids)     -> top_k cells by score
+      cell    + cluster_id(s)     -> top_k cells within the requested cluster scope
+      cell    + (no filters)      -> top_k cells by score over all cells
 
     verbose:
       When True, each target entry (cluster or cell) gets `edge_contributions`:
@@ -1661,6 +1666,10 @@ async def custom_pathway_calc(
     if cell_ids    is None:               cell_ids    = []
     if not isinstance(cluster_ids, list): cluster_ids = []
     if not isinstance(cell_ids,    list): cell_ids    = []
+    if top is not None:
+        top_k = int(top)
+    if top_n is not None:
+        top_k = int(top_n)
     # Scale-aware actionable validation
     if scale == "cluster" and not cluster_id and not cluster_ids:
         return {"success": False,
@@ -1780,11 +1789,41 @@ async def custom_pathway_calc(
             row = X_csr[loc]
             return np.asarray(row.todense()).ravel() if sp.issparse(row) else np.asarray(row).ravel()
 
+        cell_scope = None
+        scope_description = None
+        if cluster_id or cluster_ids:
+            if cluster_key not in adata.obs.columns:
+                result = {"success": False,
+                          "error": f"cluster_key '{cluster_key}' not in adata.obs"}
+                _log_call("custom_pathway_calc", _inp, result, int((time.time()-_t0)*1000))
+                return result
+            use_cids = [str(c) for c in cluster_ids] if cluster_ids else []
+            if use_cids and any(c.lower() == "all" for c in use_cids):
+                use_cids = list(adata.obs[cluster_key].astype(str).unique())
+            if not use_cids and cluster_id:
+                use_cids = [str(cluster_id)]
+            mask = adata.obs[cluster_key].astype(str).isin(use_cids).values
+            cell_scope = np.where(mask)[0]
+            if len(cell_scope) == 0:
+                result = {"success": False,
+                          "error": f"0 cells matched {cluster_key} in {use_cids}"}
+                _log_call("custom_pathway_calc", _inp, result, int((time.time()-_t0)*1000))
+                return result
+            scope_description = {
+                "cluster_key": cluster_key,
+                "cluster_ids": use_cids,
+                "n_scope": int(len(cell_scope)),
+            }
+
         if cell_ids:
             scores = {}
+            scope_set = set(cell_scope.tolist()) if cell_scope is not None else None
             for cid in cell_ids:
                 if cid in adata.obs.index:
                     loc = adata.obs.index.get_loc(cid)
+                    if scope_set is not None and loc not in scope_set:
+                        scores[cid] = {"error": "cell outside requested cluster scope"}
+                        continue
                     if verbose:
                         scores[cid] = {
                             "score": float(norms[loc]),
@@ -1804,11 +1843,17 @@ async def custom_pathway_calc(
                 "n_edges":  len(edges),
                 "scores":   scores,
             }
+            if scope_description is not None:
+                result["scope"] = scope_description
             _log_call("custom_pathway_calc", _inp, result, int((time.time()-_t0)*1000))
             return result
 
-        # No cell_ids -> top_k over all cells
-        order = np.argsort(-norms)[:max(1, top_k)]
+        # No cell_ids -> top_k over all cells, or over requested cluster scope.
+        if cell_scope is not None:
+            scoped_order = cell_scope[np.argsort(-norms[cell_scope])[:max(1, top_k)]]
+            order = scoped_order
+        else:
+            order = np.argsort(-norms)[:max(1, top_k)]
         barcodes = [str(adata.obs.index[i]) for i in order]
         top_cells = []
         for b, i in zip(barcodes, order):
@@ -1828,6 +1873,8 @@ async def custom_pathway_calc(
             "top_k":    int(top_k),
             "top_cells": top_cells,
         }
+        if scope_description is not None:
+            result["scope"] = scope_description
         _log_call("custom_pathway_calc", _inp, result, int((time.time()-_t0)*1000))
         return result
 

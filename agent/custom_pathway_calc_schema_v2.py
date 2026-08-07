@@ -11,7 +11,8 @@ CUSTOM_PATHWAY_CALC_TOOL = {"type": "function", "function": {
         "edges=[[src, tgt, weight], ...]: curate from get_expressed_dorothea_edges + your own markers, "
         "prune off-target TFs (aim for >=4 edges / >=5 unique vertices). "
         "Workflow to narrow down: (1) scale='cluster' + cluster_ids=['all'] ranks every cluster in one "
-        "call; (2) then scale='cell' + cell_ids=<cells of the top cluster> returns per-cell {cell_id: score}. "
+        "call; (2) then scale='cell' + cluster_id='<top cluster>' returns top_k cells within that cluster, "
+        "or scale='cell' + cell_ids=<specific cells> scores only those cells. "
         "verbose=True attaches edge_contributions per target (per-edge [source,target,weight,beta,"
         "contribution] sorted desc, top verbose_top_n) so you can SEE which edges drive the score and "
         "prune/refine. ACCURATE, target-specific edges (true marker genes of the requested celltype) "
@@ -26,13 +27,15 @@ CUSTOM_PATHWAY_CALC_TOOL = {"type": "function", "function": {
         "vertices":      {"type": "array",   "items": {"type": "string"},
                           "description": "Optional gene list (informational; edges already define endpoints)."},
         "scale":         {"type": "string",  "description": "'cluster' (default) or 'cell' (per-cell norm)."},
-        "cluster_id":    {"type": "string",  "description": "Single cluster id (scale='cluster'). Omit/null for scale='cell'."},
+        "cluster_id":    {"type": "string",  "description": "Single cluster id. For scale='cluster', score that cluster; for scale='cell', restrict top_k cell ranking to cells in this cluster."},
         "cluster_ids":   {"type": "array",   "items": {"type": "string"},
-                          "description": "Batch cluster ids (scale='cluster'). Use ['all'] to score every cluster."},
+                          "description": "Batch cluster ids. For scale='cluster', score clusters; for scale='cell', restrict top_k cell ranking to cells in these clusters. Use ['all'] only for cluster-scale all-cluster ranking."},
         "cell_ids":      {"type": "array",   "items": {"type": "string"},
-                          "description": "Specific cell barcodes (scale='cell'). Empty -> top_k ranking over all cells."},
+                          "description": "Specific cell barcodes (scale='cell'). Empty -> top_k ranking over all cells, or over cluster_id/cluster_ids when provided."},
         "cluster_key":   {"type": "string",  "description": "obs column for clustering (default: 'leiden'). Must exist in adata.obs."},
         "top_k":         {"type": "integer", "description": "Top-K cells when scale='cell' and cell_ids empty (default 10)."},
+        "top":           {"type": "integer", "description": "Deprecated alias for top_k; prefer top_k."},
+        "top_n":         {"type": "integer", "description": "Deprecated alias for top_k; prefer top_k."},
         "name":          {"type": "string",  "description": "Pathway name label (informational)."},
         "verbose":       {"type": "boolean", "description": "If True, include per-edge contribution breakdown (sorted desc) for each target."},
         "verbose_top_n": {"type": "integer", "description": "Max edges per target in edge_contributions when verbose=True (default 10)."},

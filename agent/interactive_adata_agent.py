@@ -47,9 +47,10 @@ for root in ROOTS:
         sys.path.insert(0, str(root))
 
 try:
-    from tools_no_kg import SYSTEM_PROMPT_NOKG, TOOLS
+    from interactive_prompt import SYSTEM_PROMPT_INTERACTIVE
+    from tools_no_kg import TOOLS
 except Exception as exc:  # pragma: no cover - user-facing startup error
-    raise SystemExit(f"Could not import tools_no_kg.py: {exc}")
+    raise SystemExit(f"Could not import interactive prompt or tools_no_kg.py: {exc}")
 
 
 NO_SAMPLEID_TOOLS = {
@@ -345,7 +346,7 @@ def append_tool_response(messages: list[dict], tool_name: str, content: str) -> 
 
 
 def read_user_line(prompt_text: str) -> str:
-    if _prompt_toolkit_prompt is not None:
+    if _prompt_toolkit_prompt is not None and getattr(sys.stdin, "isatty", lambda: False)():
         return _prompt_toolkit_prompt(prompt_text)
     return input(prompt_text)
 
@@ -424,7 +425,7 @@ def main() -> None:
         logger.write("mcp_reset", result=truncate_text(reset_result, args.tool_response_max_chars))
 
     messages = [
-        {"role": "system", "content": SYSTEM_PROMPT_NOKG},
+        {"role": "system", "content": SYSTEM_PROMPT_INTERACTIVE},
         {
             "role": "user",
             "content": (
@@ -435,7 +436,8 @@ def main() -> None:
         },
     ]
     if logger:
-        logger.write("system_prompt", content=SYSTEM_PROMPT_NOKG)
+        logger.write("system_prompt", content=SYSTEM_PROMPT_INTERACTIVE)
+        logger.write("tool_schema_summary", tools=[t["function"]["name"] for t in TOOLS])
         logger.write("session_context", content=messages[1]["content"])
     if startup_message:
         print("\n[startup message]\n" + startup_message + "\n")
@@ -449,7 +451,7 @@ def main() -> None:
     print("\nType questions. Use 'exit' or 'quit' to stop. During tool/model turns, press Ctrl-G to queue a guiding message.\n")
     try:
         while True:
-            user_text = read_user_line("adata> ").strip()
+            user_text = read_user_line("Request> ").strip()
             if user_text.lower() in {"exit", "quit"}:
                 if logger:
                     logger.write("session_end", reason=user_text.lower())
