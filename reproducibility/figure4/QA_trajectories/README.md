@@ -49,6 +49,6 @@ cluster-level annotation to a more focused, single-cell-level hypothesis test
 within a heterogeneous lymphoid cluster. They should not be described as proving
 that cluster 18 is purely NKT, purely B cell or purely APC. The correct
 description is that cluster 18 is lymphoid enriched, dominated by T-cell signal,
-with smaller NK-like, APC and B-cell hypotheses tested through
+with smaller NK, APC and B-cell hypotheses tested through
 observed marker expression and custom TF-target/pathway edge activity.
 
