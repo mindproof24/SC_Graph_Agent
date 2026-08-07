@@ -1,5 +1,17 @@
 #!/usr/bin/env python3
 
+"""Modified KEGG KGML parser used by SC_Graph_Agent.
+
+Derived from keggx v0.1.0 by Johnny Li:
+https://github.com/iamjli/keggx
+Upstream commit: 10b30ca7c70587b6b1387211badd5bc9aebfbe09
+
+The vendored implementation modifies KGML relation parsing, official gene-symbol
+mapping, group-node expansion, package-resource handling, and integration with
+the SC_Graph_Agent server workflow. See the LICENSE and NOTICE files in the
+vendored package root.
+"""
+
 
 import numpy as np
 import pandas as pd

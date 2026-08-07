@@ -1,0 +1,19 @@
+This directory contains a substantially modified derivative of keggx.
+
+Original software
+-----------------
+Name: KEGGX
+Author: Johnny Li
+Upstream repository: https://github.com/iamjli/keggx
+Upstream version: 0.1.0
+Upstream commit: 10b30ca7c70587b6b1387211badd5bc9aebfbe09
+License: MIT
+
+SC_Graph_Agent modifications
+----------------------------
+The vendored implementation adapts KGML relation parsing, official gene-symbol
+mapping, group-node expansion, package-resource handling, and integration with
+the server-side pathway-analysis workflow for scRNA-seq analysis.
+
+The original copyright and MIT license are retained in LICENSE. The upstream
+author is not responsible for the modifications in this vendored version.

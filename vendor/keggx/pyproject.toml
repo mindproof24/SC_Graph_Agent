@@ -7,6 +7,8 @@ name = "keggx"
 version = "0.1.2+scgraph"
 description = "Vendored modified keggx used by SC Graph Agent KEGG parsing"
 requires-python = ">=3.10"
+license = "MIT"
+license-files = ["LICENSE"]
 dependencies = [
     "numpy==2.3.5",
     "pandas==2.3.3",
@@ -18,6 +20,9 @@ dependencies = [
 
 [tool.setuptools]
 packages = ["keggx"]
+
+[tool.setuptools.data-files]
+"." = ["LICENSE", "NOTICE"]
 
 [tool.setuptools.package-data]
 keggx = [
