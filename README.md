@@ -17,7 +17,6 @@ Large assets are intentionally not tracked:
 - `.h5ad` datasets
 - KEGG/DoRothEA data caches
 
-<<<<<<< HEAD
 =======
 **Both training rounds used OpenRLHF 0.10.3 with the `reinforce_baseline`
 advantage estimator, corresponding to the baseline variant of REINFORCE++.**
