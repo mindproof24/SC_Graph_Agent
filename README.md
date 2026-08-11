@@ -3,13 +3,12 @@
 Runtime package for interactive AnnData analysis with:
 
 - FastMCP AnnData tool server
-<<<<<<< HEAD
+
 - PyO3/Rust kernels for A*/KEGG/custom-pathway scoring
 - Ollama Qwen3.5 GRPO step9 interactive command-line agent
-=======
 - PyO3/Rust kernels (`cwg_rust`) for A*/KEGG/custom-pathway scoring
 - Ollama Qwen3.5 reinforcement-trained interactive command-line agent
->>>>>>> Standardize scGraphAgent model naming and training metadata
+
 
 Large assets are intentionally not tracked:
 
