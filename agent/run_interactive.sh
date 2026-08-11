@@ -3,7 +3,7 @@ set -euo pipefail
 
 ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 PYTHON_BIN="${PYTHON_BIN:-python}"
-MODEL="${OLLAMA_MODEL:-qwen35-grpo-step9-8k}"
+MODEL="${OLLAMA_MODEL:-scgraphagent-qwen3.5-27b-8k}"
 OLLAMA_URL="${OLLAMA_URL:-http://localhost:11434}"
 MCP_URL="${MCP_URL:-http://localhost:8005/mcp}"
 NUM_CTX="${NUM_CTX:-8192}"

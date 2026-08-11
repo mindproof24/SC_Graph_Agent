@@ -1,4 +1,4 @@
-FROM ./models/qwen35-grpo-step9-Q4_K_M.gguf
+FROM ./models/scGraphAgent_qwen3.5-27B_Q4_K_M.gguf
 
 TEMPLATE {{ .Prompt }}
 RENDERER qwen3.5

@@ -1,0 +1,18 @@
+SC Graph Agent Qwen3.5-27B GGUF
+Copyright 2026 the SC Graph Agent authors
+
+This artifact is a modified and quantized derivative of Qwen3.5-27B.
+Qwen3.5-27B was developed by the Qwen Team, Alibaba Cloud, and is distributed
+under the Apache License, Version 2.0.
+
+Upstream model:
+https://huggingface.co/Qwen/Qwen3.5-27B
+
+Modifications:
+- REINFORCE++-baseline reinforcement training with QLoRA adapters for
+  graph-guided scRNA-seq tool use;
+- merge of the released step-9 adapter into the upstream checkpoint; and
+- conversion to GGUF Q4_K_M for Ollama deployment.
+
+The name Qwen is used only to identify the origin of the model. No endorsement
+by the Qwen Team or Alibaba Cloud is implied.

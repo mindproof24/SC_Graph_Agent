@@ -374,7 +374,7 @@ def inject_guiding_message(messages: list[dict], logger: SessionLogger | None) -
 
 def main() -> None:
     p = argparse.ArgumentParser()
-    p.add_argument("--model", default=os.getenv("OLLAMA_MODEL", "qwen35-grpo-step9"))
+    p.add_argument("--model", default=os.getenv("OLLAMA_MODEL", "scgraphagent-qwen3.5-27b"))
     p.add_argument("--ollama-url", default=os.getenv("OLLAMA_URL", "http://localhost:11434"))
     p.add_argument("--mcp-url", default=os.getenv("MCP_URL", "http://localhost:8005/mcp"))
     p.add_argument("--sampleid", required=True)

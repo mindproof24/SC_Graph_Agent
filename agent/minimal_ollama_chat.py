@@ -15,7 +15,7 @@ def post_json(url: str, payload: dict) -> dict:
 
 def main() -> None:
     p = argparse.ArgumentParser()
-    p.add_argument("--model", default="qwen35-grpo-step9")
+    p.add_argument("--model", default="scgraphagent-qwen3.5-27b")
     p.add_argument("--ollama-url", default="http://localhost:11434")
     p.add_argument("--num-ctx", type=int, default=32000)
     p.add_argument("prompt", nargs="?", default="What is a CD8 memory T cell? Answer in one sentence.")
@@ -33,4 +33,3 @@ def main() -> None:
 
 if __name__ == "__main__":
     main()
-

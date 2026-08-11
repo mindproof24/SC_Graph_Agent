@@ -9,7 +9,8 @@ logs/
 data/
 !vendor/keggx/keggx/data/
 !vendor/keggx/keggx/data/**
-ollama/models/
+# Keep model documentation and deployment metadata; exclude weight artifacts.
+ollama/models/*.gguf
 *.h5ad
 *.h5
 *.gguf

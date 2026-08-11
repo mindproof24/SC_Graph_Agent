@@ -1,0 +1,28 @@
+{
+  "artifact": "scGraphAgent_qwen3.5-27B_Q4_K_M.gguf",
+  "artifact_bytes": 17157098528,
+  "artifact_sha256": "3925248cd21f6190e8f9fc20867e394237b29d552e3432ae5aba384c0bed741f",
+  "architecture": "Qwen3.5-27B dense",
+  "upstream_model": "Qwen/Qwen3.5-27B",
+  "training_source_identifier": "unsloth/Qwen3.5-27B",
+  "upstream_revision": null,
+  "upstream_revision_note": "The exact upstream Git revision was not retained in the archived training manifest.",
+  "upstream_license": "Apache-2.0",
+  "modification": "REINFORCE++-baseline training with QLoRA adapters for graph-guided scRNA-seq tool use",
+  "training_implementation": "OpenRLHF 0.10.3 with advantage_estimator=reinforce_baseline, corresponding to the baseline variant of REINFORCE++",
+  "checkpoint": "step9",
+  "lora_rank": 64,
+  "lora_alpha": 128,
+  "lora_dropout": 0.05,
+  "quantization": "Q4_K_M",
+  "deployment_runtime": "Ollama",
+  "deployment_runtime_tested_version": "0.24.0",
+  "default_num_ctx": 16384,
+  "generation_defaults": {
+    "temperature": 1.0,
+    "top_p": 0.95,
+    "top_k": 20
+  },
+  "source_repository": "https://github.com/mindproof24/SC_Graph_Agent",
+  "created_year": 2026
+}

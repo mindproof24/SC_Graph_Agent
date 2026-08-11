@@ -3,15 +3,32 @@
 Runtime package for interactive AnnData analysis with:
 
 - FastMCP AnnData tool server
+<<<<<<< HEAD
 - PyO3/Rust kernels for A*/KEGG/custom-pathway scoring
 - Ollama Qwen3.5 GRPO step9 interactive command-line agent
+=======
+- PyO3/Rust kernels (`cwg_rust`) for A*/KEGG/custom-pathway scoring
+- Ollama Qwen3.5 reinforcement-trained interactive command-line agent
+>>>>>>> Standardize scGraphAgent model naming and training metadata
 
 Large assets are intentionally not tracked:
 
-- `qwen35-grpo-step9-Q4_K_M.gguf`
+- `scGraphAgent_qwen3.5-27B_Q4_K_M.gguf`
 - `.h5ad` datasets
 - KEGG/DoRothEA data caches
 
+<<<<<<< HEAD
+=======
+**Both training rounds used OpenRLHF 0.10.3 with the `reinforce_baseline`
+advantage estimator, corresponding to the baseline variant of REINFORCE++.**
+
+KEGG KGML parsing uses a vendored and substantially modified derivative of
+[keggx v0.1.0](https://github.com/iamjli/keggx), originally developed by Johnny
+Li and distributed under the MIT License. The vendored parser adapts KGML
+relation processing, official gene-symbol mapping, group-node expansion, and
+server integration for the SC_Graph_Agent workflow. Attribution and license
+details are provided in `vendor/keggx/NOTICE` and `vendor/keggx/LICENSE`.
+>>>>>>> Standardize scGraphAgent model naming and training metadata
 
 
 
@@ -75,13 +92,13 @@ Put or symlink the GGUF here:
 
 ```bash
 mkdir -p ollama/models
-ln -s /path/to/qwen35-grpo-step9-Q4_K_M.gguf ollama/models/
+ln -s /path/to/scGraphAgent_qwen3.5-27B_Q4_K_M.gguf ollama/models/
 ```
 
 Create an Ollama model. For 24GB GPUs, start with 16k; use 8k if OOM.
 
 ```bash
-bash ollama/create_model.sh 16k qwen35-grpo-step9-16k
+bash ollama/create_model.sh 16k scgraphagent-qwen3.5-27b-16k
 ```
 
 ## Run
@@ -102,7 +119,7 @@ Terminal 2:
 
 ```bash
 SHOW_THINKING=1 \
-OLLAMA_MODEL=qwen35-grpo-step9-16k \
+OLLAMA_MODEL=scgraphagent-qwen3.5-27b-16k \
 NUM_CTX=16384 \
 MAX_TOOL_TURNS=30 \
 TOOL_RESPONSE_MAX_CHARS=12000 \
