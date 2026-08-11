@@ -26,7 +26,7 @@ Li and distributed under the MIT License. The vendored parser adapts KGML
 relation processing, official gene-symbol mapping, group-node expansion, and
 server integration for the SC_Graph_Agent workflow. Attribution and license
 details are provided in `vendor/keggx/NOTICE` and `vendor/keggx/LICENSE`.
->>>>>>> Standardize scGraphAgent model naming and training metadata
+
 
 
 
