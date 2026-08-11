@@ -16,9 +16,7 @@ Large assets are intentionally not tracked:
 - `.h5ad` datasets
 - KEGG/DoRothEA data caches
 
-=======
-**Both training rounds used OpenRLHF 0.10.3 with the `reinforce_baseline`
-advantage estimator, corresponding to the baseline variant of REINFORCE++.**
+
 
 KEGG KGML parsing uses a vendored and substantially modified derivative of
 [keggx v0.1.0](https://github.com/iamjli/keggx), originally developed by Johnny
