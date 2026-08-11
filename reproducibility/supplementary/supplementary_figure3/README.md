@@ -15,6 +15,3 @@ python reproducibility/supplementary/supplementary_figure3/scripts/figure_cardia
   --h5ad /path/to/cardio_perturb_phate.h5ad
 ```
 
-## Figure-text check
-
-The archived code, correlation table, and figure use `HAND2`. The current supplementary-document legend states `HAND1`. This discrepancy must be resolved in the manuscript before release; the files here preserve the analysis that generated the archived figure.
