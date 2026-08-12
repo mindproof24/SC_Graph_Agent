@@ -8,23 +8,13 @@ Runtime package for interactive AnnData analysis with:
 - Ollama Qwen3.5 reinforcement-trained interactive command-line agent
 
 
-Large assets are intentionally not tracked:
+## Data and model availability
 
-- `scGraphAgent_qwen3.5-27B_Q4_K_M.gguf`
-- `.h5ad` datasets
-- KEGG/DoRothEA data caches
+The trained "scGraphAgent_qwen3.5-27B-Q4_K_M.gguf' model, the processed 
+'cardio_perturb_phate.h5ad' object, and figure source data are available from Zenodo:
+https://doi.org/10.5281/zenodo.21759232
 
-
-
-KEGG KGML parsing uses a vendored and substantially modified derivative of
-[keggx v0.1.0](https://github.com/iamjli/keggx), originally developed by Johnny
-Li and distributed under the MIT License. The vendored parser adapts KGML
-relation processing, official gene-symbol mapping, group-node expansion, and
-server integration for the SC_Graph_Agent workflow. Attribution and license
-details are provided in `vendor/keggx/NOTICE` and `vendor/keggx/LICENSE`.
-
-
-
+Figure reproduction inputs, scripts and instructions are provided under reproducibility/ (reproducibility/).
 
 ## Layout
 
