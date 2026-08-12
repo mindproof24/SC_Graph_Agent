@@ -14,7 +14,7 @@ The trained "scGraphAgent_qwen3.5-27B-Q4_K_M.gguf' model, the processed
 'cardio_perturb_phate.h5ad' object, and figure source data are available from Zenodo:
 https://doi.org/10.5281/zenodo.21759232
 
-Figure reproduction inputs, scripts and instructions are provided under reproducibility/ (reproducibility/).
+Figure reproduction inputs, scripts and instructions are provided under reproducibility folder
 
 ## Layout
 
