@@ -1,4 +1,4 @@
-# scMCP Interactive Runtime
+# scGraphAgent
 
 Runtime package for interactive AnnData analysis with:
 
