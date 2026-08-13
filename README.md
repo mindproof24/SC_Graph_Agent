@@ -143,9 +143,6 @@ next safe point. For example:
 [Guiding Message] : This dataset is mouse. Use organism="mouse".
 ```
 
-Guidance becomes part of the analysis trajectory and should therefore be
-retained when reporting or auditing an interactive case study.
-
 ## Reproducing the analyses
 
 The [`reproducibility/`](reproducibility/) directory separates the workflows
