@@ -1,28 +1,28 @@
 #!/usr/bin/env python3
 """
-eval_grpo_dataset.py — GRPO 데이터셋 기반 모델 평가
+eval_grpo_dataset.py — model evaluation on the historical training/evaluation dataset
 
 Usage:
-    # Ollama (gpt-oss:20b 기본)
+    # Ollama using the default model (gpt-oss:20b)
     MCP_URL=http://localhost:8005/mcp python eval_grpo_dataset.py \
         --jsonl imm_grpo_no_context.jsonl --ollama
 
-    # Ollama 다른 모델
+    # Ollama using another model
     python eval_grpo_dataset.py --jsonl imm_grpo_no_context.jsonl \
         --ollama --ollama-model llama3.1:8b
 
-    # HF base 모델 (BF16)
+    # HF base model in BF16
     python eval_grpo_dataset.py --jsonl imm_grpo_no_context.jsonl --base-only
 
     # HF ckpt500
     python eval_grpo_dataset.py --jsonl imm_grpo_no_context.jsonl \
         --ckpt checkpoints_v2_moe/checkpoint-500
 
-    # 샘플 N개만
+    # Evaluate only N samples
     python eval_grpo_dataset.py --jsonl imm_grpo_no_context.jsonl \
         --ollama --n-samples 10
 """
-
+# NOTE :: Interactive runtime imports only TOOLS from this historical evaluation module; evaluation execution remains separate.
 from __future__ import annotations
 
 import argparse
@@ -48,13 +48,13 @@ MAX_TURNS      = 20
 LOG_DIR        = Path("logs/eval_grpo")
 TEMPERATURE    = 0.3   # overridden by --temp CLI flag
 
-# ── MCP sticky 멀티워커 (8005~8008 등) — sampleid 결정적 해시로 포트 분산 ──
+# Sticky MCP workers (for example, ports 8005-8008), selected by a deterministic sample-ID hash.
 import zlib
 MCP_BASE_PORT = int(os.getenv("MCP_BASE_PORT", "8005"))
-MCP_N_WORKERS = int(os.getenv("MCP_N_WORKERS", "1"))   # 1=단일(MCP_URL), >1=sticky 분산
+MCP_N_WORKERS = int(os.getenv("MCP_N_WORKERS", "1"))   # 1 uses MCP_URL; values >1 enable sticky distribution.
 
 def _mcp_url_for(sampleid: str) -> str:
-    """같은 sampleid는 같은 서버(namespace 유지), 다른 sampleid는 N서버 분산."""
+    """Kepp each sample ID in one server namesapce while distributing different samples across workers"""
     if MCP_N_WORKERS <= 1:
         return MCP_URL
     port = MCP_BASE_PORT + (zlib.crc32((sampleid or "").encode()) % MCP_N_WORKERS)
@@ -66,17 +66,17 @@ def _seed_for_item(base_seed: int | None, item_id: str, rep: int) -> int | None:
         return None
     return int(base_seed + (zlib.crc32((item_id or "").encode()) % 1_000_000) + rep)
 
-# ── vLLM 백엔드 (--vllm) — main()에서 세팅하는 모듈 글로벌 ──
-EXECUTE_ONLY = False   # --execute-only: 모델에 execute_pipeline_code 도구만 노출
+# vLLM backend globals configured by main() when --vllm is enabled.
+EXECUTE_ONLY = False   # Expose only execute_pipeline_code when --execute-only is enabled.
 USE_VLLM    = False
 VLLM_ENGINE = None
 VLLM_TOK    = None
 VLLM_LORA   = None
 
-# sampleid 인자를 받지 않는 MCP 툴들 — eval-script가 자동 주입하면 Pydantic validation 에러
+# MCP tools without a sampleid argument; automatic injection would fail Pydantic validation.
 _NO_SAMPLEID_TOOLS = {
     "get_kg_context",
-    "resolve_query_to_context_set",   # KG 전역 tool — sampleid 받지 않음 (서버 pydantic 거부 회피)
+    "resolve_query_to_context_set",   # Global KG tool without sampleid; retained for historical evaluation.
     #"score_context_subgraph",
     #"synthesize_context_kg_paths",
 }
@@ -344,7 +344,7 @@ SYSTEM_PROMPT_TEST = (
 )
 
 TOOL_CALL_LIMIT  = 10
-ITEM_TIMEOUT_SEC = 720  # 12분
+ITEM_TIMEOUT_SEC = 720  # 12 minutes
 
 
 # ─── Scoring ──────────────────────────────────────────────────────────────────
@@ -369,12 +369,12 @@ def _norm_celltype(s: str) -> str:
 
 
 def _key_tokens(s: str) -> set:
-    """stopword 제외한 식별 토큰 집합."""
+    """Return identifier-like tokens after removing stopwords"""
     return {t for t in _norm_celltype(s).split() if t and t not in _CELLTYPE_STOP}
 
 
 def _resolve_option(pred: str, options: list[str]) -> str | None:
-    """pred와 options 중 token overlap이 가장 큰 옵션을 반환. 동률/0이면 None."""
+    """Return the option with the largest token overlap, or None for a tie or zero overlap."""
     p_keys = _key_tokens(pred)
     if not p_keys:
         return None
@@ -388,7 +388,7 @@ def _resolve_option(pred: str, options: list[str]) -> str | None:
 
 
 def _celltype_match(pred: str, gt: str) -> bool:
-    """fallback: substring 또는 key-token 동일."""
+    """Fallback matching by substring or identical key tokens."""
     p, g = _norm_celltype(pred), _norm_celltype(gt)
     if not p or not g:
         return False
@@ -491,7 +491,7 @@ def score_prediction(pred_json: dict, item: dict) -> dict:
         for p, g in zip(pred_labels, gt_labels):
             resolved = _resolve_option(p, options) if options else None
             if resolved is None:
-                # 옵션 매핑 실패 시 기존 fuzzy 매칭으로 fallback
+                # Fall back to the existing fuzzy matcher when option mapping fails.
                 ok = _celltype_match(p, g)
             else:
                 ok = (resolved == g)
@@ -609,8 +609,8 @@ async def call_mcp_tool(tool_name: str, args: dict, mcp_url: str | None = None) 
 
 async def ollama_generate(messages: list, model: str, max_tokens: int, seed: int | None = None) -> dict:
     """
-    Ollama /api/chat 호출. 반환: {"role", "content", "tool_calls"?}
-    500 오류(context 초과 등) 시 빈 메시지 반환해 루프를 종료시킴.
+    Call Ollama /api/chat and return a message containing role, content and optional tool_calls.
+    Return an empty message after server errors such as context overflow so the loop can stop cleanly.
     """
     async with httpx.AsyncClient(timeout=300) as http:
         options = {
@@ -634,14 +634,14 @@ async def ollama_generate(messages: list, model: str, max_tokens: int, seed: int
             },
         )
         if resp.status_code >= 500:
-            print(f"  [Ollama {resp.status_code}] context 초과 또는 서버 오류 — 조기 종료")
+            print(f"  [Ollama {resp.status_code}] context limit or server error; stopping early")
             return {"role": "assistant", "content": "", "tool_calls": []}
         resp.raise_for_status()
         return resp.json()["message"]
 
 
 async def ollama_generate_no_tools(messages: list, model: str, max_tokens: int, seed: int | None = None) -> dict:
-    """force-final용. tools 파라미터 없이 generate → 모델이 도구 못 부르고 텍스트만 생성."""
+    """Generate a forced final response without exposing tools to the model."""
     async with httpx.AsyncClient(timeout=300) as http:
         options = {
             "temperature":    TEMPERATURE,
@@ -685,7 +685,7 @@ def parse_ollama_tool_calls(message: dict) -> list[dict]:
     return calls
 
 
-# ─── Harmony tool call 파싱 (HF 모드용) ──────────────────────────────────────
+# ───Parse Harmony-style tool calls in Hugging Face mode ──────────────────────────────────────
 
 def _coerce(v: str):
     s = v.strip()
@@ -703,13 +703,13 @@ def _coerce(v: str):
 
 
 def parse_harmony_tool_calls(text: str) -> list[dict]:
-    """Qwen3.5 XML 함수형: <tool_call><function=NAME><parameter=K>V</parameter>...</function></tool_call>
-    (gpt-oss Harmony / Hermes JSON 폴백 포함)."""
+    """Qwen3.5 XML tool calls expected: <tool_call><function=NAME><parameter=K>V</parameter>...</function></tool_call>
+    (gpt-oss Harmony / Hermes JSON fallback included)."""
     calls = []
     for m in re.finditer(r'<tool_call>\s*(.*?)\s*</tool_call>', text, re.DOTALL):
         body = m.group(1)
         fm = re.search(r'<function=([^>\s]+)\s*>', body)
-        if fm:  # XML 함수 형식
+        if fm:  # XML function format
             name = fm.group(1).strip()
             args = {}
             for pm in re.finditer(r'<parameter=([^>]+?)>\s*(.*?)\s*</parameter>', body, re.DOTALL):
@@ -717,7 +717,7 @@ def parse_harmony_tool_calls(text: str) -> list[dict]:
             if name:
                 calls.append({"name": name, "arguments": args})
             continue
-        jm = re.search(r'(\{.*\})', body, re.DOTALL)   # <tool_call>{json}</tool_call> 폴백
+        jm = re.search(r'(\{.*\})', body, re.DOTALL)   # JSON fallback inside <tool_call>, <tool_call>{json}</tool_call>
         if jm:
             obj = None
             for cand in (jm.group(1), jm.group(1).replace('\\"', '"')):
@@ -729,7 +729,7 @@ def parse_harmony_tool_calls(text: str) -> list[dict]:
                     try: a = json.loads(a)
                     except Exception: a = {}
                 calls.append({"name": obj["name"], "arguments": a})
-    # gpt-oss Harmony 폴백
+    # gpt-oss Harmony fallback
     if not calls:
         for m in re.finditer(r'to=functions\.(\w+).*?<\|message\|>(.*?)(?:<\|call\|>|$)', text, re.DOTALL):
             try: a = json.loads(m.group(2).strip().strip('"'))
@@ -740,17 +740,17 @@ def parse_harmony_tool_calls(text: str) -> list[dict]:
 
 def _strip_think(text: str) -> str:
     text = re.sub(r'<think>.*?</think>', '', text, flags=re.DOTALL)
-    # 프롬프트가 <think>로 시작해 모델이 여는 태그 없이 ...</think>로 끝내는 경우
+    # Handle output that closes </think> without emitting the opening tag already present in the prompt.
     if '</think>' in text:
         text = text.split('</think>', 1)[1]
     return text
 
 
 def extract_thinking(text: str) -> str:
-    """Qwen3.5 raw generation에서 thinking 부분만 저장용으로 추출.
+    """Extract the reasoning segment from raw Qwen3.5 output for logging.
 
-    vLLM 경로는 프롬프트가 이미 '<think>\\n'으로 끝난 상태에서 생성하므로,
-    모델 출력에는 여는 <think> 없이 '... </think><tool_call>...' 형태가 흔하다.
+    The vLLM prompt already ends with '<think>\n', so generated output commonly
+    omits the opening tag and returns '... </think><tool_call>...'.
     """
     if not text:
         return ""
@@ -760,15 +760,15 @@ def extract_thinking(text: str) -> str:
     if '</think>' in text:
         return text.split('</think>', 1)[0].strip()
     if '<tool_call>' in text:
-        # 닫는 </think>를 생략하고 바로 tool_call을 낸 경우에도 앞부분은 reasoning이다.
+        # Text before a direct tool call is reasoning even when </think> is omitted.
         return text.split('<tool_call>', 1)[0].strip()
     return ""
 
 
 def extract_text_content(text: str) -> str:
-    """Qwen3.5: <think>...</think> 와 <tool_call>...</tool_call> 제거 후 남은 텍스트
-    (= 최종 답 JSON). gpt-oss Harmony도 폴백 처리."""
-    if "<|message|>" in text and "<|start|>" in text:  # gpt-oss Harmony 폴백
+    """Remove Qwen3.5 thinking and tool-call blocks and return the remaining final-answer text.
+    A gpt-oss Harmony fallback is also supported."""
+    if "<|message|>" in text and "<|start|>" in text:  # gpt-oss Harmony fallback.
         parts = []
         for seg in text.split("<|start|>"):
             if not seg.strip() or "to=functions." in seg:
@@ -804,8 +804,8 @@ def hf_generate(model, tok, messages, max_new_tokens=512):
 
 
 async def vllm_generate(prompt_text: str, max_tokens) -> str:
-    """vLLM AsyncLLMEngine로 1 턴 생성 (LoRA 적용). prompt_text = 누적된 raw 프롬프트 문자열.
-    재렌더 없이 모델 raw 출력(<think> 포함)을 그대로 이어붙여 추론 연속성 유지 (학습과 동일)."""
+    """Generate one turn with vLLM AsyncLLMEngine and an optional LoRA adapter.
+    Append raw model output without rerendering to preserve the training-time reasoning sequence."""
     import uuid
     from vllm import SamplingParams
     sp = SamplingParams(temperature=TEMPERATURE, top_p=0.9,
@@ -820,7 +820,7 @@ async def vllm_generate(prompt_text: str, max_tokens) -> str:
 # ─── Run one item ─────────────────────────────────────────────────────────────
 
 _RESET_CODE = """\
-# ── 세션 초기화: 이전 실행이 adata.obs에 추가한 컬럼과 평가 누수 컬럼 제거 ─────
+# Reset columns added by earlier runs and remove evaluation-leakage columns.
 import json as _json
 _KEEP_PREFIX = ('n_genes', 'n_counts', 'total_counts', 'pct_counts', 'doublet')
 _KEGG_MARKER = (' signaling', ' cancer', ' disease', ' infection',
@@ -859,9 +859,9 @@ async def _run_item_inner(
     ollama_seed: int | None = None,
 ) -> dict:
     sampleid = item["sampleid"]
-    mcp_url  = _mcp_url_for(sampleid)   # sticky: 같은 sampleid=같은 서버
+    mcp_url  = _mcp_url_for(sampleid)   # Keep the same sample ID on the same server.
 
-    # ── 세션 시작 전 adata.obs 리셋 (이전 실행 leakage 방지) ──────────────
+    # Reset adata.obs before the session to prevent leakage from earlier runs.
     reset_out = await call_mcp_tool("execute_pipeline_code",
                                     {"sampleid": sampleid, "code": _RESET_CODE},
                                     mcp_url=mcp_url)
@@ -881,9 +881,9 @@ async def _run_item_inner(
     final_text   = ""
     t_start      = time.time()
 
-    # ── vLLM: 재렌더 없이 raw 누적 → thinking 연속성 유지 (학습 token-시퀀스와 동일) ──
-    # vllm_P는 assistant 헤더를 *포함하지 않는* 상태로 유지하고, 생성 시점에만 _ASST_HDR을 붙임.
-    _ASST_HDR = "<|im_start|>assistant\n<think>\n"   # Qwen3.5 add_generation_prompt 형식
+    # vLLM appends raw output without rerendering, preserving the training token sequence.
+    # Keep vllm_P without an assistant header and add _ASST_HDR only immediately before generation.
+    _ASST_HDR = "<|im_start|>assistant\n<think>\n"   # Qwen3.5 add_generation_prompt format.
     vllm_P = ""
     if USE_VLLM:
         _tools = ([t for t in TOOLS if t["function"]["name"] == "execute_pipeline_code"]
@@ -891,7 +891,7 @@ async def _run_item_inner(
         vllm_P = VLLM_TOK.apply_chat_template(
             messages, tools=_tools, tokenize=False, add_generation_prompt=False)
     def _vp_turn(raw_out, tail):
-        # 한 turn 누적: assistant(<think>+raw_out) 닫고 + tail(user/tool 블록, 헤더 없음)
+        # Append one assistant turn and its user/tool tail without another assistant header.
         return _ASST_HDR + raw_out + "<|im_end|>\n" + tail
 
     for turn in range(max_turns):
@@ -917,11 +917,11 @@ async def _run_item_inner(
             thinking     = extract_thinking(raw)
 
         if not use_ollama:
-            print(f"  [RAW turn={turn+1} len={len(raw)}] {raw[:400]!r}")   # 임시 디버그: 모델 raw 출력 확인
+            print(f"  [RAW turn={turn+1} len={len(raw)}] {raw[:400]!r}")   # Optional raw-output diagnostic.
         if thinking:
             print(f"  [thinking turn={turn+1}, len={len(thinking)}] {thinking[:160]}...")
 
-        # execute-only 강제: 비허용 tool 호출 거부 (schema 제한만으론 모델이 학습된 도구 부름)
+        # Reject disallowed calls in execute-only mode; schema restriction alone may not override learned behavior.
         if EXECUTE_ONLY and tool_calls:
             _bad = [tc["name"] for tc in tool_calls if tc["name"] != "execute_pipeline_code"]
             tool_calls = [tc for tc in tool_calls if tc["name"] == "execute_pipeline_code"]
@@ -936,13 +936,13 @@ async def _run_item_inner(
 
         if not tool_calls:
             if text_content.strip():
-                # 정상 종료 — 모델이 final answer 제공
+                # Normal termination after the model supplies a final answer.
                 final_text = text_content
                 print(f"  [turn={turn+1}] no tool call ({elapsed_gen:.1f}s) → {text_content[:120]}")
                 trajectory.append({"turn": turn+1, "type": "text", "content": text_content, "thinking": thinking})
                 break
             else:
-                # 빈 응답 (analysis만 채우고 final/tool 둘 다 빔) — break 대신 nudge 후 다음 turn
+                # Nudge another turn when the model emits reasoning but neither a final answer nor a tool call.
                 print(f"  [turn={turn+1}] empty (no tool, no text) — nudging to continue")
                 trajectory.append({"turn": turn+1, "type": "text", "content": "", "thinking": thinking})
                 _nudge = "Continue investigating with tool calls, or provide your final JSON answer now."
@@ -953,8 +953,7 @@ async def _run_item_inner(
                         messages.append({"role": "assistant", "content": "", "thinking": thinking})
                     messages.append({"role": "user", "content": _nudge})
                 continue
-
-        # ── tool 예산 초과: 더 이상 tool 실행 안 하고 최종답 강제 (학습 agent_func와 동일) ──
+        # Stop executing tools after the budget and force a final response, matched behaviour of agent_func.
         if len(tools_called) >= TOOL_CALL_LIMIT:
             print(f"  [turn={turn+1}] budget exhausted ({len(tools_called)}) — forcing final")
             _bud = "Tool budget exhausted. Provide your final answer now as a single JSON object — no more tool calls."
@@ -964,7 +963,7 @@ async def _run_item_inner(
                 messages.append({"role": "user", "content": _bud})
             continue
 
-        # tool call 처리
+        # Process tool calls
         if use_ollama:
             asst_msg = {
                 "role":       "assistant",
@@ -976,15 +975,15 @@ async def _run_item_inner(
                 asst_msg["thinking"] = thinking
             messages.append(asst_msg)
 
-        # hf(비-vLLM, 비-ollama): raw를 assistant content로 (think는 템플릿이 떼지만 tool 이력은 보존)
+        # In plain HF mode, preserve raw assistant content and tool history.
         if not use_ollama and not USE_VLLM:
             messages.append({"role": "assistant", "content": raw})
 
-        _vp_tool_blocks = []   # vLLM: 이번 턴 tool 결과 누적
+        _vp_tool_blocks = []   # Accumulate vLLM tool responses for this turn.
         for tc in tool_calls:
             name = tc["name"]
             args = tc["arguments"]
-            # sampleid를 인자로 받지 않는 툴 — context_id 등에 묶여 자동 주입 시 Pydantic validation 에러
+            # Do not inject sampleid into tools whose schemas do not accept it.
             if isinstance(args, dict) and "sampleid" not in args and name not in _NO_SAMPLEID_TOOLS:
                 args["sampleid"] = sampleid
 
@@ -1001,7 +1000,7 @@ async def _run_item_inner(
                 pass
 
             print(f"  [tool_resp] {tool_result}")
-            # 긴 응답은 입력 전 truncate (context 폭발 방지)
+            # Truncate long tool responses before adding them to the model context.
             content_for_msg = tool_result if len(tool_result) <= 4000 else \
                 tool_result[:4000] + f"\n...({len(tool_result)-4000} chars truncated)"
             if USE_VLLM:
@@ -1019,7 +1018,7 @@ async def _run_item_inner(
                 "thinking": thinking,
             })
 
-        # vLLM: 이번 턴의 tool 결과들을 한 번에 누적 (assistant raw + tool_response 블록들)
+        # Append the assistant output and all tool responses for this vLLM turn together.
         if USE_VLLM and tool_calls:
             vllm_P += _vp_turn(raw, "".join(_vp_tool_blocks))
 
@@ -1087,7 +1086,7 @@ async def run_item(item: dict, max_turns: int, max_tokens: int,
             timeout=ITEM_TIMEOUT_SEC,
         )
     except asyncio.TimeoutError:
-        print(f"  [TIMEOUT] {item['id']} — {ITEM_TIMEOUT_SEC//60}분 초과, score=0")
+        print(f"  [TIMEOUT] {item['id']} — exceeded {ITEM_TIMEOUT_SEC//60} minutes; score=0")
         return {
             "id":              item["id"],
             "level":           item["level"],
@@ -1175,7 +1174,7 @@ async def main():
     global TEMPERATURE
     p = argparse.ArgumentParser(description="GRPO dataset evaluation runner")
     p.add_argument("--jsonl",         required=True,
-                   help="평가할 JSONL 파일 (신규 데이터: core_files/grpo_data/grpo_data/)")
+                   help="JSONL file to evaluate")
     p.add_argument("--ollama",        action="store_true",        help="Ollama 모드 (gpt-oss:20b)")
     p.add_argument("--ollama-model",  default=OLLAMA_MODEL,       help=f"Ollama 모델명 (default: {OLLAMA_MODEL})")
     p.add_argument("--base-only",     action="store_true",        help="HF base 모델")
