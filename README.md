@@ -3,7 +3,7 @@
 **Graph-informed, tool-using analysis of single-cell RNA-seq data**
 
 scGraphAgent connects an open-weight language model to executable AnnData
-analysis and two graph-based biological tools. The pathway tool evaluates
+analysis and mainly two types of graph-based biological tools. The pathway tool evaluates
 KEGG or user-defined gene-edge sets and exposes the edges contributing to each
 score. The regulatory tool uses A* cell-state paths to prioritize DoRothEA
 transcription factor (TF)-target relationships by path support and
