@@ -1,8 +1,8 @@
-"""NO_KG 학습 framework용 TOOLS + SYSTEM_PROMPT.
-- eval_grpo_dataset.TOOLS에서 KG 도구 2개(get_kg_context, resolve_query_to_context_set) 제거.
-- custom_pathway_calc는 최신 서버 시그니처(verbose/verbose_top_n) v2 스키마로 교체.
-- 시스템 프롬프트: KG 체인 제거, '그래프 합성→cluster 랭킹→cell narrow-down' 유도, KG deprecated 명시, max13.
-원본(eval_grpo_dataset.py / build_schedule.py)은 건드리지 않음.
+"""Tool schemas and a system prompt for the no-KG analysis configuration.
+- Remove the two deprecated KG tools from eval_grpo_dataset.TOOLS.
+- Replace custom_pathway_calc with the current v2 schema supporting verbose output.
+- Guide graph synthesis, cluster ranking and cell-level narrowing without the KG chain.
+The source evaluation module and schedule construction are not modified here.
 """
 import sys, copy
 from pathlib import Path
@@ -16,12 +16,12 @@ TOOLS = []
 for _t in _BASE_TOOLS:
     _n = _t["function"]["name"]
     if _n in DEPRECATED_TOOLS:
-        continue                                   # KG 도구 제거
+        continue                                   # Remove deprecated KG tools.
     if _n == "custom_pathway_calc":
-        TOOLS.append(copy.deepcopy(CUSTOM_PATHWAY_CALC_TOOL))  # v2(verbose) 스키마로 교체
+        TOOLS.append(copy.deepcopy(CUSTOM_PATHWAY_CALC_TOOL))  # Use the current verbose schema.
         continue
-    _t = copy.deepcopy(_t)                          # 원본 dict 공유 변형 방지
-    if _n == "get_expressed_dorothea_edges":        # KG 참조 제거
+    _t = copy.deepcopy(_t)                          # Avoid mutating the imported dictionaries.
+    if _n == "get_expressed_dorothea_edges":        # Remove references to the deprecated KG chain.
         _t["function"]["description"] = _t["function"]["description"].replace(
             "Bridge between gene curation (e.g. from resolve_query_to_context_set) and custom_pathway_calc. ",
             "Bridge between your own gene curation and custom_pathway_calc. ")
@@ -31,7 +31,7 @@ assert all(t["function"]["name"] not in DEPRECATED_TOOLS for t in TOOLS)
 assert any(t["function"]["name"] == "custom_pathway_calc"
            and "verbose" in t["function"]["parameters"]["properties"] for t in TOOLS)
 
-# ── NO_KG 시스템 프롬프트 (SYSTEM_PROMPT_TEST 기반, KG 체인 → 자체 마커+dorothea+custom_pathway) ──
+# No-KG system prompt
 SYSTEM_PROMPT_NOKG = (
     "You are a single-cell RNA analysis assistant connected to an MCP tool server.\n\n"
     "Inspect adata before answering. Cell IDs must come from adata.obs_names — do not invent.\n\n"
