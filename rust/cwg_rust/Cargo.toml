@@ -2,8 +2,8 @@
 name = "cwg_rust"
 version = "0.2.0"
 edition = "2021"
-authors = ["scMCP Team"]
-description = "Rust-accelerated ClusterWeightedGraph"
+authors = ["scGraphAgent Authors"]
+description = "Rust-accelerated graph activity computation for scGraphAgent"
 license = "MIT"
 
 [lib]
