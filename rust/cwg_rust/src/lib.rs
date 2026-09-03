@@ -1284,7 +1284,6 @@ fn _cwg_rust(m: &Bound<'_, PyModule>) -> PyResult<()> {
 
     // astar_phate.rs
     m.add_function(wrap_pyfunction!(astar_phate::astar_all_pairs, m)?)?;
-    // test done :: m.add_function(wrap_pyfunction!(astar_phate::astar_all_pairs_legacy, m)?)?;
     // conservative graph
     m.add_function(wrap_pyfunction!(build_conservative_graph, m)?)?;
 
