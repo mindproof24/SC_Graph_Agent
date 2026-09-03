@@ -1257,16 +1257,10 @@ fn _cwg_rust(m: &Bound<'_, PyModule>) -> PyResult<()> {
     m.add_function(wrap_pyfunction!(compute_all_cwg_norms_sparse, m)?)?;
     m.add_function(wrap_pyfunction!(compute_cluster_cwg_norms_sparse, m)?)?;
 
-    // selective_integrated.rs
-    m.add_class::<selective_integrated::CascadePath>()?;
+    // KEGG pathway edge scoring
     m.add_class::<selective_integrated::KEGGPathway>()?;
-    m.add_class::<selective_integrated::SelectiveIntegratedGraph>()?;
     m.add_function(wrap_pyfunction!(
         selective_integrated::make_kegg_edges_bidirectional,
-        m
-    )?)?;
-    m.add_function(wrap_pyfunction!(
-        selective_integrated::build_all_integrated_graphs,
         m
     )?)?;
     m.add_function(wrap_pyfunction!(
@@ -1275,10 +1269,6 @@ fn _cwg_rust(m: &Bound<'_, PyModule>) -> PyResult<()> {
     )?)?;
     m.add_function(wrap_pyfunction!(
         selective_integrated::compute_all_kegg_norms_cluster_mean,
-        m
-    )?)?;
-    m.add_function(wrap_pyfunction!(
-        selective_integrated::compute_all_integrated_norms_sparse,
         m
     )?)?;
 
