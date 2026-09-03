@@ -1,9 +1,6 @@
 """
-ClusterWeightedGraph - Rust 가속 버전
-
-Rust로 구현된 빠른 G2 norm 계산 및 TF-TF cascade 분석
-
-사용법:
+Python interface for the Rust-accelerated ClusterWeighted implementation.
+Usage:
     pip install maturin
     cd cwg_rust && maturin develop --release
 """
@@ -14,7 +11,7 @@ from scipy.sparse import issparse
 from typing import Dict, List, Optional, Union, Tuple
 import time
 
-# Rust 모듈 임포트 시도
+# Import the compiled Rust extension when available.
 try:
     from cwg_rust._cwg_rust import (
         ClusterWeightedGraphRust,
@@ -29,13 +26,10 @@ except ImportError:
 
 class ClusterWeightedGraph:
     """
-    Rust 가속 ClusterWeightedGraph
-    
-    Features:
-    - 빠른 G2 norm 계산 (병렬)
-    - TF-TF cascade 분석
-    - Greedy max-beta path 탐색
-    - 클러스터 activity 계산
+    Python wrapper for Rust-accelerated graph-norm calculations.
+
+    The wrapper constructs a graph from prior TF-target edges and exposes
+    per-cell and cluster-restricted edge-L2 activity calculations.
     """
     
     def __init__(
