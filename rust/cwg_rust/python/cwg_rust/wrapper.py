@@ -115,12 +115,11 @@ class ClusterWeightedGraph:
         self.pathway_genes = self._rust_cwg.get_pathway_genes()
         self.n_genes = self._rust_cwg.n_genes
         self.n_edges = self._rust_cwg.n_edges
-        self.n_tf_tf_edges = self._rust_cwg.n_tf_tf_edges
         
         # Retain the indices of cells included in the cluster.
         self._cluster_cells = self._rust_cwg.get_cluster_cells()
         
-        # Cache edge-level values used by convience methods.
+        # Cache edge-level values used by convenience methods.
         self._cache_edge_data()
     
     def _prepare_dorothea(
@@ -172,7 +171,7 @@ class ClusterWeightedGraph:
         self.target_expr = dict(self._rust_cwg.get_target_expr())
     
     # =========================================================
-    # G2 Norm 계산
+    # G2 Norm Calculation
     # =========================================================
     
     def compute_graph_norm(self, cell_id: str) -> float:
