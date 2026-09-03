@@ -809,7 +809,7 @@ async def vllm_generate(prompt_text: str, max_tokens) -> str:
     import uuid
     from vllm import SamplingParams
     sp = SamplingParams(temperature=TEMPERATURE, top_p=0.9,
-                        max_tokens=max_tokens)   # 학습 rollout과 일치 (rep penalty 없음)
+                        max_tokens=max_tokens)   
     final = None
     async for o in VLLM_ENGINE.generate(prompt_text, sp, uuid.uuid4().hex,
                                         lora_request=VLLM_LORA):
@@ -971,7 +971,7 @@ async def _run_item_inner(
                 "tool_calls": message.get("tool_calls", []),
             }
             if thinking:
-                # Harmony reasoning passthrough — 다음 턴에 analysis channel 복원
+                # Preserve Harmony reasoning in the analysis channel on the next turn.
                 asst_msg["thinking"] = thinking
             messages.append(asst_msg)
 
@@ -1176,7 +1176,7 @@ async def main():
     p.add_argument("--jsonl",         required=True,
                    help="JSONL file to evaluate")
     p.add_argument("--ollama",        action="store_true",        help="Use the Ollama backend (gpt-oss:20b)")
-    p.add_argument("--ollama-model",  default=OLLAMA_MODEL,       help=f"Ollama 모델명 (default: {OLLAMA_MODEL})")
+    p.add_argument("--ollama-model",  default=OLLAMA_MODEL,       help=f"Ollama model name (default: {OLLAMA_MODEL})")
     p.add_argument("--base-only",     action="store_true",        help="Evaluate the Hugging Face base model")
     p.add_argument("--ckpt",          default=None,               help="HF LoRA checkpoint path")
     p.add_argument("--vllm",          action="store_true",        help="Use the vLLM AsyncLLM backend with batching and concurrent evaluation; requires --ckpt")
@@ -1205,7 +1205,7 @@ async def main():
     args = p.parse_args()
 
     if not args.ollama and not args.base_only and not args.ckpt and not args.adk and not args.vllm:
-        p.error("--ollama, --base-only, --ckpt, --adk, --vllm 중 하나 필요")
+        p.error("--ollama, --base-only, --ckpt, --adk or --vllm is required")
 
 
     TEMPERATURE = args.temp
@@ -1224,7 +1224,7 @@ async def main():
         if missing:
             print(f"[filter-id] unmatched IDs: {sorted(missing)}")
         if not items:
-            print("[filter-id] 매칭된 no matching items; exiting")
+            print("[filter-id] no matching items; exiting")
             return
     if args.skip:
         items = items[args.skip:]
