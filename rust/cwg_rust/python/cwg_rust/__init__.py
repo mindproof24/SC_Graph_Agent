@@ -1,10 +1,10 @@
 """
 cwg_rust - Rust-accelerated ClusterWeightedGraph
 
-Rust로 구현된 빠른 G2 norm 계산 및 TF-TF cascade 분석
+Python exports for Rust graph activity and A* path calculations.
 """
 
-# Rust 컴파일된 모듈 임포트 (maturin이 _cwg_rust로 빌드)
+# Maturin builds the compiled extension as ``_cwg_rust``.
 from ._cwg_rust import (
     ClusterWeightedGraphRust,
     compute_all_cwg_norms,
@@ -12,50 +12,33 @@ from ._cwg_rust import (
     compute_all_cwg_norms_sparse,
     compute_cluster_cwg_norms_sparse,
     KEGGPathway,
-    CascadePath,
-    SelectiveIntegratedGraph,
     make_kegg_edges_bidirectional,
-    build_all_integrated_graphs,
     compute_all_kegg_norms_sparse,
     compute_all_kegg_norms_cluster_mean,
-    compute_all_integrated_norms_sparse,
     astar_all_pairs,
     build_conservative_graph,
-
-    #test done
-    #astar_all_pairs_legacy
 )
 
-# Python wrapper
-from cwg_rust.wrapper import ClusterWeightedGraph
+# Python convenience wrapper.
+from .wrapper import ClusterWeightedGraph
 
 __all__ = [
-    # Rust — lib.rs (DoRothEA CWG)
+    # DoRothEA graph activity.
     "ClusterWeightedGraphRust",
     "compute_all_cwg_norms",
     "compute_cluster_cwg_norms",
     "compute_all_cwg_norms_sparse",
     "compute_cluster_cwg_norms_sparse",
-    # Rust — selective_integrated.rs (batch sparse)
+    # KEGG graph activity.
     "compute_all_kegg_norms_sparse",
-    "compute_all_integrated_norms_sparse",
     "compute_all_kegg_norms_cluster_mean",
     "KEGGPathway",
-    "CascadePath",
-    "SelectiveIntegratedGraph",
     "make_kegg_edges_bidirectional",
-    "build_all_integrated_graphs",
-    # Rust — astar_phate.rs (trajectory sensitive graph finder)
+    # PHATE-coordinate A* path search.
     "astar_all_pairs",
-    
-    # testing.. - done/
-    #"astar_all_pairs_legacy",
-    
-    
-    
-    # Rust — lib.rs (conservative graph builder)
+    # Conservative TF-target graph construction.
     "build_conservative_graph",
-    # Python wrapper
+    # Python convenience wrapper.
     "ClusterWeightedGraph",
 ]
 
