@@ -67,5 +67,5 @@ SYSTEM_PROMPT_NOKG = (
 )
 
 if __name__ == "__main__":
-    print(f"TOOLS {len(TOOLS)}개:", [t["function"]["name"] for t in TOOLS])
+    print(f"TOOLS {len(TOOLS)}:", [t["function"]["name"] for t in TOOLS])
     print(f"SYSTEM_PROMPT_NOKG {len(SYSTEM_PROMPT_NOKG)}자")
