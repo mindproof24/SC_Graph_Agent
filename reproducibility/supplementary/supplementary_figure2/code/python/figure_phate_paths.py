@@ -2,19 +2,21 @@
 """
 fig_supple/scripts/02_figure_phate_paths.py
 ===========================================
-'정확히 계산된 PHATE path'(378k 정제 manifold 단일그룹 A*)를 Illustrator-editable PDF 로.
+Plot PHATE A* paths from the refined 378k-cell cardiac dataset as an
+Illustrator-editable PDF.
 
-3 패널 (동일 PHATE 레이아웃, 배경 378k 회색 + A* path cell 오버레이):
-  A  path cell colored by score_maturation   (검증된 성숙축, corr(PHATE1)=-0.80)
-  B  path cell colored by n_genes            (A* 구동변수/끝점축, ⊥ maturation)
-  C  path cell colored by pert_status        (DE=perturbed 세포가 path 어디에 있나)
-+ A 패널에 대표 path 궤적선(subsample) 오버레이.
+The three panels use the same PHATE layout, with all 378k cells in gray and
+A* path cells overlaid:
+  A  path cells colored by score_maturation;
+  B  path cells colored by n_genes, the A* endpoint variable; and
+  C  path cells colored by perturbation status.
+Panel A also shows a sample of individual path traces.
 
-editable: pdf.fonttype=42(텍스트 벡터), 점구름만 rasterized(축/라벨/선은 벡터).
+PDF text, axes, labels and path lines remain vector-editable; point clouds are
+rasterized to keep the file size manageable.
 
-실행:  source ~/venv-grpo/bin/activate
-       python fig_supple/scripts/02_figure_phate_paths.py
-필요:  00 산출 astar_path_cells.parquet + cardio_perturb_phate.h5ad (배경)
+Required inputs are ``data/astar_path_cells.parquet``,
+``data/path_provenance.json`` and the deposited ``cardio_perturb_phate.h5ad``.
 """
 import argparse
 import json
@@ -39,7 +41,7 @@ cells = pd.read_parquet(DATA / "astar_path_cells.parquet")
 prov  = json.loads((DATA / "path_provenance.json").read_text())
 print(f"[load] path cells={len(cells)} unique={cells.cell_idx.nunique()} paths={cells.path_id.nunique()}")
 
-# 배경 = 전체 378k PHATE (backed, X 미로드)
+# Load the complete PHATE background in backed mode without materializing X.
 A = ad.read_h5ad(args.h5ad, backed="r")
 bg = np.asarray(A.obsm["X_phate"])[:, :2]
 print(f"[bg] {bg.shape[0]:,} cells")
@@ -60,7 +62,7 @@ ax = axs[0]; base(ax, "A  A* path cells — score_maturation")
 vmax = np.nanpercentile(np.abs(cells.score_maturation), 98)
 sc = ax.scatter(px, py, c=cells.score_maturation, cmap="RdBu_r", vmin=-vmax, vmax=vmax,
                 s=5, linewidths=0, rasterized=True, zorder=2)
-# 대표 path 궤적선 (벡터, subsample)
+# Overlay a reproducible sample of path traces as vectors.
 pids = cells.path_id.unique()
 rng = np.random.default_rng(0)
 for pid in rng.choice(pids, size=min(40, len(pids)), replace=False):
@@ -68,14 +70,14 @@ for pid in rng.choice(pids, size=min(40, len(pids)), replace=False):
     ax.plot(seg.phate1, seg.phate2, "-", color="#333333", lw=0.3, alpha=0.25, zorder=1)
 cb = fig.colorbar(sc, ax=ax, shrink=0.7, pad=0.02); cb.set_label("maturation", fontsize=7)
 
-# ── B: n_genes (sequential, A* 구동축) ─────────────────────────────
+# ── B: n_genes used to select A* endpoints ─────────────────────────────
 ax = axs[1]; base(ax, "B  A* path cells — n_genes (driver)")
 sc = ax.scatter(px, py, c=cells.n_genes, cmap="viridis",
                 vmin=np.nanpercentile(cells.n_genes, 2), vmax=np.nanpercentile(cells.n_genes, 98),
                 s=5, linewidths=0, rasterized=True, zorder=2)
 cb = fig.colorbar(sc, ax=ax, shrink=0.7, pad=0.02); cb.set_label("n_genes", fontsize=7)
 
-# ── C: pert_status (DE 세포 위치) ──────────────────────────────────
+# ── C: perturbation status ──────────────────────────────────
 ax = axs[2]; base(ax, "C  A* path cells — perturbation")
 pal = {"perturb": "#d62728", "perturb_recovered": "#ff9896",
        "control": "#1f77b4", "control_recovered": "#aec7e8", "ambiguous": "#bbbbbb"}
@@ -89,7 +91,7 @@ handles = [Line2D([0], [0], marker="o", ls="", mfc=pal[k], mec="none", ms=5,
                   label=k) for k in pal if (st == k).any()]
 ax.legend(handles=handles, fontsize=6, loc="best", frameon=False)
 
-# ── 캡션 (축-정합 정직 명시) ───────────────────────────────────────
+# ── Provenance and axis-association diagnostics ───────────────────────────────────────
 cap = (f"378k refined manifold (cardio_perturb_phate.h5ad), single-group A* traversal | "
        f"paths(reduced)={prov['n_paths_reduced']}, unique path cells={prov['n_unique_path_cells']}, "
        f"seed={prov['seed']}, git={prov['git_hash']}\n"
@@ -97,7 +99,7 @@ cap = (f"378k refined manifold (cardio_perturb_phate.h5ad), single-group A* trav
        f"corr(n_genes,PHATE1)={prov['corr_phate1_ngenes']:+.3f}, "
        f"corr(n_genes,maturation)={prov['corr_ngenes_maturation']:+.3f}  "
        f"→ A* driver (n_genes) ⊥ evaluation axis (maturation).")
-fig.suptitle("Correctly-computed PHATE A* paths in Perturb-seq", fontsize=11, y=1.06)
+fig.suptitle("PHATE A* paths in cardiac Perturb-seq data", fontsize=11, y=1.06)
 fig.text(0.5, -0.06, cap, ha="center", va="top", fontsize=6.3, color="#333333")
 
 for ext in ("pdf", "png"):
