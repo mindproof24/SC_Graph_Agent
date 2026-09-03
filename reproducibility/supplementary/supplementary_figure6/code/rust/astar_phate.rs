@@ -1,12 +1,11 @@
 // src/astar_phate.rs
 // ============================================================
-// PHATE A* 병렬 경로 탐색 — Python 구조 보존, 무거운 부분만 Rust
+// Parallel PHATE A* path search in PHATE coordinate space
 // ============================================================
 //
-// 설계 원칙:
-//   PhateGenePathFinder 클래스의 Python 구조는 100% 유지.
-//   Python이 호출하는 단 하나의 진입점:
-//
+// Python prepares the PHATE coordinates, n_genes values, candidate
+// start and goal cells, neighborhood radius, gene-weight parameter
+// and iteration limit. It calls single Rust entry point:
 //     cwg_rust.astar_all_pairs(
 //         coords,        ← adata.obsm["X_phate"]  (numpy, zero-copy)
 //         gene_values,   ← adata.obs[gene_col].values (numpy, zero-copy)
@@ -14,19 +13,18 @@
 //         high_indices,  ← Python list[int]
 //         delta,
 //         gene_weight,
-//         noise_scale,   ← delta * 1.5  (Python heuristic과 동일)
+//         max_iter,
 //     ) -> list[list[int]]
 //
-// Rust가 하는 일:
-//   1. coords / gene_values numpy 배열을 zero-copy 슬라이스로 참조
-//   2. 내부용 KDTree 빌드 (Arc로 rayon 스레드 간 공유, read-only)
-//   3. 8100쌍 rayon par_iter — GIL 완전 해제 상태에서 병렬 A*
-//      각 A*: BinaryHeap(min-heap) + Vec<f32> g_score + generation 배열
+// Rust converts the input arrays to contiguous f32 buffers, builds
+// an internal KDTree and searches all candidate endpoint pairs in
+// parallel with rayon while the Python GIL is released.
 //
-// Python이 그대로 유지하는 것:
-//   - PhateGenePathFinder.__init__ / get_neighbors / heuristic
-//   - reconstruct_path / get_optimized_params / select_candidates
-//   - trajectory_find 시각화 로직
+// Each search uses accumulated L2 arc length as g and
+//
+//     h = L2(current, goal)
+//         + gene_weight * abs(gene_values[goal] - gene_values[current]).
+//
 // ============================================================
 
 use pyo3::prelude::*;
@@ -40,8 +38,8 @@ use rand::Rng;
 
 
 // ============================================================
-// 1. A* min-heap 엔트리
-//    BinaryHeap은 max-heap → neg_f = -f_score 로 min-heap 동작
+// 1. A* min-heap entry
+//    BinaryHeap is a max-heap; neg_f = -f_score makes it operate as a min-heap.
 // ============================================================
 
 
@@ -68,28 +66,26 @@ impl Ord for EntryL2 {
     }
 }
  
-
-
 // ============================================================
-// 2. 내부 KDTree
+// 2. Internal KDTree
 //
-//    이유: rayon 스레드에서 Python 객체(scipy KDTree)에 접근 불가.
-//          GIL 없이 query_ball을 호출하려면 Rust 자체 KDTree 필요.
+//    Rationale: rayon threads cannot access Python objects such as scipy KDTree.
+//    A Rust-native KDTree is required to call query_ball without the GIL.
 //
-//    특성:
-//    - PHATE는 2~3차원 → 트리 깊이가 낮아 pruning 매우 효과적
-//    - 노드: arena(Vec<Node>) 인덱스 참조 → 힙 재귀 없음
-//    - 좌표: flat Vec<f32> (f64→f32: 메모리 절반, SIMD 연산 친화)
-//    - 빌드: select_nth_unstable 로 O(n log n) 중앙값 분할
+//    Properties:
+//    - PHATE has 2-3 dimensions, yielding shallow trees and effective pruning.
+//    - Nodes use arena Vec<Node> indices and avoid per-node heap allocation.
+//    - Coordinates use a flat Vec<f32>, reducing storage per copied value relative to f64.
+//    - Construction uses select_nth_unstable for O(n log n) median partitioning.
 // ============================================================
 
 enum Node {
     Leaf(u32),
     Internal {
-        dim:   u8,    // 분할 차원 (2~3이므로 u8 충분)
-        val:   f32,   // 분할 좌표값
-        left:  u32,   // nodes[left] 인덱스
-        right: u32,   // nodes[right] 인덱스
+        dim:   u8,    // Split dimension; u8 is sufficient for 2-3 dimensions.
+        val:   f32,   // Split coordinate value.
+        left:  u32,   // Index into nodes[left].
+        right: u32,   // Index into nodes[right].
     },
 }
 
@@ -125,7 +121,7 @@ impl KDTree {
             return ni;
         }
 
-        // 분산이 가장 큰 차원 선택
+        // Select the dimension with the largest spread.
         let dim = (0..ndim).max_by(|&a, &b| {
             let spread = |d: usize| {
                 let (mut lo, mut hi) = (f32::INFINITY, f32::NEG_INFINITY);
@@ -139,7 +135,7 @@ impl KDTree {
             spread(a).partial_cmp(&spread(b)).unwrap_or(Ordering::Equal)
         }).unwrap_or(0);
 
-        // 중앙값으로 분할 (O(n), partial sort)
+        // Partition at the median using an O(n) partial sort.
         let mid    = start + count / 2;
         let sub    = &mut idx[start..end];
         let mid_rel = count / 2;
@@ -150,7 +146,7 @@ impl KDTree {
         });
         let split_val = coords[idx[mid] as usize * ndim + dim];
 
-        // placeholder 먼저 push → 자식 재귀 후 실제 값으로 교체
+        // Push a placeholder first, then replace it after recursively building the children.
         let ni = nodes.len() as u32;
         nodes.push(Node::Leaf(0));
 
@@ -166,7 +162,7 @@ impl KDTree {
         ni
     }
 
-    /// cell_idx 기준 반경 r 이내 이웃 세포 인덱스 반환
+    /// Return indices of cells within radius of cell_idx
     #[inline]
     fn query_ball(&self, cell_idx: usize, r: f32) -> Vec<u32> {
         let off = cell_idx * self.ndim;
@@ -185,7 +181,7 @@ impl KDTree {
             }
             Node::Internal { dim, val, left, right } => {
                 let d = center[*dim as usize] - val;
-                // center 쪽을 먼저 탐색, 분할면 거리 ≤ r이면 반대쪽도 탐색
+                // Search the center side first and the opposite side when the split-plane distance is ≤ r.
                 if d <= 0.0 {
                     self.query_rec(*left,  center, r, out);
                     if -d <= r { self.query_rec(*right, center, r, out); }
@@ -215,22 +211,19 @@ impl KDTree {
 }
 
 
-// ============================================================
-// 3. heuristic — Python heuristic() 수식 인라인 재현
+// =============================================================================
+// 3. Weighted heuristic
 //
-//    Python 원본:
-//      dist_spatial = np.linalg.norm(coords[cur] - coords[goal])
-//      dist_gene    = abs(gene[goal] - gene[cur])
-//      total        = dist_spatial + gene_weight * dist_gene
-//      noise        = Uniform(1 - delta*1.5, 1 + delta*1.5)
-//      return total * noise          ← find_shortest_path에서 / delta
+//    h(current) = ||coords[current] - coords[goal]||_2
+//                 + gene_weight * |gene_values[goal] - gene_values[current]|
 //
-//    Rust에서는 / delta까지 포함해 f_score 계산에 바로 사용.
-// ============================================================
+// The first term is a spatial distance in PHATE coordinates. The second term
+// biases the search toward cells with gene-complexity values closer to the
+// goal. Because g accumulates spatial arc length only, the added gene term is
+// not guaranteed to be admissible with respect to g; the routine should be
+// interpreted as a guided A* traversal rather than a guaranteed geodesic solver.
+// ==============================================================================
 
-
-// ── v2: ng와 단위 일치
-// admissibility: L2 triangle inequality → h(n) ≤ h*(n) 보장
 #[inline]
 fn heuristic_l2(
     tree:        &KDTree,
@@ -242,7 +235,7 @@ fn heuristic_l2(
     let cur_c  = tree.coord_slice(current);
     let goal_c = tree.coord_slice(goal);
  
-    // L2 공간 거리 (g와 동일 단위)
+    // L2 spatial distance in the same units as g.
     let spatial: f32 = cur_c.iter()
         .zip(goal_c.iter())
         .map(|(a, b)| (a - b) * (a - b))
@@ -255,14 +248,16 @@ fn heuristic_l2(
 }
 
 // ============================================================
-// 4. came_from 역추적 — Python reconstruct_path() 재현
+// 4. Path reconstruction with generation-tagged parent pointers
 //
-//    generation 배열 기법:
-//      매 A*마다 came_from 전체를 u32::MAX로 초기화하는 대신,
-//      "이번 탐색 세대 번호"를 노드마다 기록.
-//      역추적 시 generation[node] != gen_id 이면 시작점으로 간주.
-//      → O(path_len) 역추적, O(방문 수) 초기화 비용 절감.
+//    Generation-array technique:
+//      Record the current search generation at each node instead of resetting
+//      the entire came_from array to u32::MAX for every A* search.
+//      During backtracking, a generation mismatch acts as a safety boundary;
+//      came_from[node] == u32::MAX marks the initialized start node.
+//      This gives O(path_len) reconstruction and avoids clearing every parent slot.
 // ============================================================
+
 
 #[inline]
 fn reconstruct_path(
@@ -276,13 +271,13 @@ fn reconstruct_path(
 
     loop {
         path.push(cur);
-        // 이번 탐색에서 설정된 부모인지 확인
+        // Check whether the parent was set during the current search.
         if generation[cur] != gen_id {
             break;
         }
         let parent = came_from[cur];
         if parent == u32::MAX {
-            break; // 시작점 도달
+            break; // Reached the start node.
         }
         cur = parent as usize;
     }
@@ -292,8 +287,13 @@ fn reconstruct_path(
 }
 
 
+
 // ============================================================
-// 6. astar_single_v2 — L2 g, L2 h, noise 없음, iter_count 위치 B
+// 5. Single-pair guided A* search
+//
+// g is accumulated L2 arc length in PHATE space. The search is deterministic
+// for fixed inputs and contains no stochastic noise term. max_iter limits the
+// number of finalized, non-stale heap entries.
 // ============================================================
  
 fn astar_single(
@@ -335,7 +335,7 @@ fn astar_single(
             return Some(reconstruct_path(came_from, generation, gen_id, goal));
         }
  
-        // stale 체크 — 카운트 전에 skip
+        // Skip stale entries before increasing the counter.
         if generation[current] == gen_id && visited[current] {
             continue;
         }
@@ -343,7 +343,8 @@ fn astar_single(
             continue;
         }
  
-        // 노드 확정 시점에 카운트 (위치 B — stale pop 미포함)
+        
+        // Count finalized nodes after excluding stale heap entries.
         iter_count += 1;
         if iter_count > max_iter {
             return None;
@@ -361,7 +362,7 @@ fn astar_single(
                 continue;
             }
  
-            // g: L2 arc length 누적 (hop count 아님)
+            // g accumulates L2 arc length rather than hop count.
             let arc         = tree.l2(tree.coord_slice(current), nb);
             let tentative_g = g_cur + arc;
  
@@ -392,27 +393,14 @@ fn astar_single(
     None
 }
 // ============================================================
-// 6. Python 노출 함수 — 단 하나의 진입점
+// 6. Python-exposed all-pairs entry point
 //
-//    PhateGenePathFinder에 아래 메서드를 추가:
-//
-//      def find_all_pairs(self, low_indices, high_indices, delta):
-//          from cwg_rust import astar_all_pairs
-//          return astar_all_pairs(
-//              self.coords,           # numpy (n_cells, ndim)
-//              self.gene_values,      # numpy (n_cells,)
-//              low_indices,
-//              high_indices,
-//              delta,
-//              self.gene_weight,
-//              delta * 1.5,           # noise_scale
-//          )
-// ============================================================
-
-
-// ============================================================
-// 8. astar_all_pairs_v2 — v2 Python 노출 함수
-//    변경점: noise_scale 없음, max_iter 추가, astar_single_v2 호출
+// Input arrays are first viewed through PyReadonlyArray and then copied and
+// converted to owned f32 buffers. The endpoint Cartesian product is processed
+// with rayon. map_init allocates one reusable search workspace per worker.
+// Callers must supply a non-empty two-dimensional coordinate array, one gene
+// value per cell and valid endpoint indices; these preconditions are enforced
+// by the Python workflow rather than checked exhaustively in this function.
 // ============================================================
  
 #[pyfunction]
@@ -448,14 +436,14 @@ pub fn astar_all_pairs(
     let delta_f32       = delta       as f32;
     let gene_weight_f32 = gene_weight as f32;
  
-    // max_iter: None이면 n_cells * 3 (Python에서 명시 권장)
+    // Use the supplied per-search limit or default to three times the cell count.
     let max_iter_u32: u32 = match max_iter {
         Some(v) => v.min(u32::MAX as u64) as u32,
         None    => (n_cells as u64 * 3).min(u32::MAX as u64) as u32,
     };
-    // ── KDTree 빌드 (1회, Arc 공유) ───────────────────────────
-    // GIL 해제 상태에서 빌드: Python 쪽 scipy KDTree와 독립적으로 존재.
-    // 메모리 이중 사용이지만 병렬화 이득이 압도적으로 큼.
+    // ── Build the KDTree once and share it through Arc ── 
+    // Build with the GIL released, independently of the Python scipy KDTree.
+    // The owned f32 coordinate buffer duplicates input data but can be shared safely.
     let tree = py.allow_threads(|| {
         Arc::new(KDTree::build(coords_f32, ndim))
     });
@@ -467,19 +455,18 @@ pub fn astar_all_pairs(
  
     let n_pairs = pairs.len();
     
-    // ── rayon 병렬 A* ─────────────────────────────────────────
+    // ── Parallel A* with rayon ─────────────────────────────────
     //
-    // map_init: 스레드당 1회 클로저를 실행해 재사용 버퍼 초기화.
-    //   → 8100번 A*마다 Vec 재할당 없음.
+    // map_init runs its closure once per worker to initialize reusable buffers.
+    // This avoids reallocating search vectors for every endpoint pair.
     //
-    // generation 기법:
-    //   각 A* 호출마다 gen_id를 1씩 증가.
-    //   노드에 기록된 generation[node]와 gen_id가 다르면
-    //   "이번 탐색에서 미방문"으로 간주 → O(1) 논리적 초기화.
-    //   gen_id overflow(u32 wrap) 시에만 실제 Vec::fill 수행.
+    // Generation technique:
+    //   Increment gen_id for each endpoint-pair search.
+    //   A node with generation[node] != gen_id is considered unvisited in the
+    //   current search, providing O(1) logical initialization.
+    //   Run Vec::fill only when gen_id overflows and wraps as u32.
     //
-    // GIL 해제 (py.allow_threads):
-    //   rayon 스레드는 Python 객체에 접근하지 않으므로 안전.
+    // Release the GIL with py.allow_threads; rayon threads do not access Python objects.
     let results: Vec<Option<Vec<usize>>> = py.allow_threads(|| {
         pairs.into_par_iter().map_init(
             || (
