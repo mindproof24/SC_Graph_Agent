@@ -1,21 +1,20 @@
-
-mod sparse_utils;
-mod selective_integrated;
 mod astar_phate;
+mod selective_integrated;
+mod sparse_utils;
 
-use pyo3::prelude::*;
-use pyo3::exceptions::PyValueError;
-use pyo3::types::PyDict;
-use numpy::{PyArray1, PyReadonlyArray1, PyReadonlyArray2};
-use rayon::prelude::*;
 use hashbrown::{HashMap, HashSet};
+use numpy::{PyArray1, PyReadonlyArray1, PyReadonlyArray2};
+use pyo3::exceptions::PyValueError;
+use pyo3::prelude::*;
+use pyo3::types::PyDict;
+use rayon::prelude::*;
 
 use crate::sparse_utils::csr_to_rust;
 // =============================================================
-// 핵심 데이터 구조
+// Core data structures
 // =============================================================
 
-/// Edge 정보
+/// Edge information
 #[derive(Clone, Debug)]
 struct Edge {
     source_local: usize,
@@ -25,27 +24,9 @@ struct Edge {
     confidence: String,
 }
 
-/// TF-TF Edge 정보 (Greedy Path용)
-#[derive(Clone, Debug)]
-struct TFEdge {
-    source: String,
-    target: String,
-    beta: f64,
-    dorothea_weight: f64,
-}
-
-/// Greedy Path 결과
-#[derive(Clone, Debug)]
-struct GreedyPathResult {
-    path: Vec<String>,
-    betas: Vec<f64>,
-    total_beta: f64,
-    length: usize,
-}
-
 /// ClusterWeightedGraph (Rust Computation)
 #[derive(Clone)]
-#[allow(dead_code)]  // These fields are accessed indirectly through methods
+#[allow(dead_code)] // These fields are accessed indirectly through methods
 struct CWGData {
     pathway_name: String,
     cluster_id: String,
@@ -61,31 +42,26 @@ struct CWGData {
     edge_tgt_local: Vec<usize>,
     dorothea_weights: Vec<f64>,
     betas: Vec<f64>,
-    
-    // TF-TF Edge for cascade
-    tf_tf_edges: Vec<TFEdge>,
-    tf_graph: HashMap<String, Vec<(String, f64, f64)>>,  // source -> [(target, beta, weight)]
-    
+
     // Expression
     source_expr: HashMap<String, f64>,
     target_expr: HashMap<String, f64>,
-    
+
     // Cluster Index
     cluster_cells: Vec<usize>,
-    
 
     beta_mode_dynamic: bool,
 }
 
 // =============================================================
-// Python에 노출되는 CWG 클래스
+// CWG class exposed to Python
 // =============================================================
 
 #[pyclass]
 #[derive(Clone)]
 pub struct ClusterWeightedGraphRust {
     data: CWGData,
-    
+
     #[pyo3(get)]
     pathway_name: String,
     #[pyo3(get)]
@@ -94,13 +70,12 @@ pub struct ClusterWeightedGraphRust {
     n_genes: usize,
     #[pyo3(get)]
     n_edges: usize,
-    #[pyo3(get)]
-    n_tf_tf_edges: usize,
 }
 
 #[pymethods]
 impl ClusterWeightedGraphRust {
-    /// Python에서 생성자 호출
+    /// Dense constructor exposed to Python.
+    /// OPTIONAL_PUBLIC API: the current server uses new_sparse() instead.
     #[new]
     #[pyo3(signature = (
         expr_matrix,
@@ -135,85 +110,93 @@ impl ClusterWeightedGraphRust {
         require_both_expressed: bool,
         beta_mode: &str,
     ) -> PyResult<Self> {
-        
         let expr = expr_matrix.as_array();
         let mask = cluster_mask.as_array();
         let d_weights = dorothea_weights.as_array();
-        
-        // 유전자 이름 → 인덱스 매핑
+
+        // Map gene names to indices.
         let gene_to_global_idx: HashMap<String, usize> = gene_names
             .iter()
             .enumerate()
             .map(|(i, g)| (g.clone(), i))
             .collect();
-        
-        // 클러스터 세포 인덱스
+
+        // Cluster cell indices
         let cluster_cells: Vec<usize> = mask
             .iter()
             .enumerate()
             .filter(|(_, &m)| m)
             .map(|(i, _)| i)
             .collect();
-        
+
         let n_cluster_cells = cluster_cells.len();
-        
+
         println!("============================================================");
-        println!("Building ClusterWeightedGraphRust: adata_{}{}", cluster_key, cluster_id);
+        println!(
+            "Building ClusterWeightedGraphRust: adata_{}{}",
+            cluster_key, cluster_id
+        );
         println!("============================================================");
         println!("Cluster cells: {}", n_cluster_cells);
-        
+
         //Confidence filtering
         let conf_set: HashSet<String> = confidence_levels
             .unwrap_or_else(|| vec!["A".into(), "B".into(), "C".into()])
             .into_iter()
             .collect();
-        
+
         let all_tfs: HashSet<String> = dorothea_sources.iter().cloned().collect();
         let mut expressed_tfs: HashMap<String, f64> = HashMap::new();
-        
+
         for tf in &all_tfs {
             if let Some(&global_idx) = gene_to_global_idx.get(tf) {
                 let tf_mean: f64 = cluster_cells
                     .iter()
                     .map(|&cell_idx| expr[[cell_idx, global_idx]])
-                    .sum::<f64>() / n_cluster_cells as f64;
-                // Only expressed TFs 
+                    .sum::<f64>()
+                    / n_cluster_cells as f64;
+                // Only expressed TFs
                 if tf_mean > tf_expr_threshold {
                     expressed_tfs.insert(tf.clone(), tf_mean);
                 }
             }
         }
-        
+
         println!("Expressed TFs: {}/{}", expressed_tfs.len(), all_tfs.len());
-        
+
         // Edge Collection
-	let mut pathway_genes_set: HashSet<String> = HashSet::new();
+        let mut pathway_genes_set: HashSet<String> = HashSet::new();
         let mut edges_data: Vec<(String, String, f64, String, f64, f64)> = Vec::new();
         let mut source_expr: HashMap<String, f64> = HashMap::new();
         let mut target_expr: HashMap<String, f64> = HashMap::new();
         let mut skipped_count = 0usize;
-        
-        for (idx, (src, tgt)) in dorothea_sources.iter().zip(dorothea_targets.iter()).enumerate() {
+
+        for (idx, (src, tgt)) in dorothea_sources
+            .iter()
+            .zip(dorothea_targets.iter())
+            .enumerate()
+        {
             let tf_mean = match expressed_tfs.get(src) {
                 Some(&v) => v,
                 None => continue,
             };
-            
+
             let conf = &dorothea_confidences[idx];
             if !conf_set.contains(conf) {
                 continue;
             }
-            
+
             let tgt_global_idx = match gene_to_global_idx.get(tgt) {
                 Some(&v) => v,
                 None => continue,
             };
-            
+
             let tgt_mean: f64 = cluster_cells
                 .iter()
                 .map(|&cell_idx| expr[[cell_idx, tgt_global_idx]])
-                .sum::<f64>() / n_cluster_cells as f64;
-            
+                .sum::<f64>()
+                / n_cluster_cells as f64;
+
             if require_both_expressed {
                 if tgt_mean <= 0.0 || tf_mean <= 0.0 {
                     skipped_count += 1;
@@ -223,62 +206,65 @@ impl ClusterWeightedGraphRust {
                 skipped_count += 1;
                 continue;
             }
-            
+
             let d_weight = d_weights[idx];
-            
+
             let beta = if beta_mode == "dynamic" {
                 (tf_mean + tgt_mean + d_weight).abs().sqrt()
             } else {
                 d_weight
             };
-            
+
             edges_data.push((
-                src.clone(), tgt.clone(), d_weight, conf.clone(), beta, tgt_mean,
+                src.clone(),
+                tgt.clone(),
+                d_weight,
+                conf.clone(),
+                beta,
+                tgt_mean,
             ));
-            
+
             pathway_genes_set.insert(src.clone());
             pathway_genes_set.insert(tgt.clone());
             source_expr.insert(src.clone(), tf_mean);
             target_expr.insert(tgt.clone(), tgt_mean);
         }
-        
+
         println!("Skipped (zero/low target expr): {}", skipped_count);
-        
+
         // Ordering of Pathway genes
         let mut pathway_genes: Vec<String> = pathway_genes_set.into_iter().collect();
         pathway_genes.sort();
-        
+
         let gene_to_local_idx: HashMap<String, usize> = pathway_genes
             .iter()
             .enumerate()
             .map(|(i, g)| (g.clone(), i))
             .collect();
-        
+
         let gene_global_indices: Vec<usize> = pathway_genes
             .iter()
-            .map(|g| *gene_to_global_idx.get(g)
-                .unwrap_or_else(|| panic!("Gene '{}' not found in adata.var_names!", g)))
+            .map(|g| {
+                *gene_to_global_idx
+                    .get(g)
+                    .unwrap_or_else(|| panic!("Gene '{}' not found in adata.var_names!", g))
+            })
             .collect();
-        
+
         println!("Pathway genes: {}", pathway_genes.len());
         println!("Edges: {}", edges_data.len());
-        
+
         // Edge Structure
         let mut edges: Vec<Edge> = Vec::with_capacity(edges_data.len());
         let mut edge_src_local: Vec<usize> = Vec::with_capacity(edges_data.len());
         let mut edge_tgt_local: Vec<usize> = Vec::with_capacity(edges_data.len());
         let mut dorothea_w: Vec<f64> = Vec::with_capacity(edges_data.len());
         let mut betas: Vec<f64> = Vec::with_capacity(edges_data.len());
-        
-        // TF-TF edges & graph formulation
-        let mut tf_tf_edges: Vec<TFEdge> = Vec::new();
-        let mut tf_graph: HashMap<String, Vec<(String, f64, f64)>> = HashMap::new();
-        let tf_set: HashSet<&String> = expressed_tfs.keys().collect();
-        
+
         for (src, tgt, d_weight, conf, beta, _) in edges_data {
             let src_local = *gene_to_local_idx.get(&src).unwrap();
             let tgt_local = *gene_to_local_idx.get(&tgt).unwrap();
-            
+
             edges.push(Edge {
                 source_local: src_local,
                 target_local: tgt_local,
@@ -286,37 +272,19 @@ impl ClusterWeightedGraphRust {
                 beta,
                 confidence: conf,
             });
-            
+
             edge_src_local.push(src_local);
             edge_tgt_local.push(tgt_local);
             dorothea_w.push(d_weight);
             betas.push(beta);
-            
-            // Verify and store TF-TF edges
-            if tf_set.contains(&tgt) {
-                tf_tf_edges.push(TFEdge {
-                    source: src.clone(),
-                    target: tgt.clone(),
-                    beta,
-                    dorothea_weight: d_weight,
-                });
-                
-                tf_graph
-                    .entry(src.clone())
-                    .or_insert_with(Vec::new)
-                    .push((tgt.clone(), beta, d_weight));
-            }
         }
-        
-        println!("TF-TF edges: {}", tf_tf_edges.len());
-        
+
         let pathway_name = format!("adata_{}{}", cluster_key, cluster_id);
         let n_genes = pathway_genes.len();
         let n_edges = edges.len();
-        let n_tf_tf_edges = tf_tf_edges.len();
-        
+
         println!("✓ Network built: {}", pathway_name);
-        
+
         let data = CWGData {
             pathway_name: pathway_name.clone(),
             cluster_id: cluster_id.to_string(),
@@ -328,24 +296,21 @@ impl ClusterWeightedGraphRust {
             edge_tgt_local,
             dorothea_weights: dorothea_w,
             betas,
-            tf_tf_edges,
-            tf_graph,
             source_expr,
             target_expr,
             cluster_cells,
             beta_mode_dynamic: beta_mode == "dynamic",
         };
-        
+
         Ok(ClusterWeightedGraphRust {
             data,
             pathway_name,
             cluster_id: cluster_id.to_string(),
             n_genes,
             n_edges,
-            n_tf_tf_edges,
         })
     }
-    
+
     /// Sparse matrix constructor (no toarray() needed)
     /// Python: ClusterWeightedGraphRust.new_sparse(adata.X, ...)
     #[staticmethod]
@@ -404,7 +369,10 @@ impl ClusterWeightedGraphRust {
         let n_cluster_cells = cluster_cells.len();
 
         println!("============================================================");
-        println!("Building ClusterWeightedGraphRust (sparse): adata_{}{}", cluster_key, cluster_id);
+        println!(
+            "Building ClusterWeightedGraphRust (sparse): adata_{}{}",
+            cluster_key, cluster_id
+        );
         println!("============================================================");
         println!("Cluster cells: {}", n_cluster_cells);
 
@@ -417,7 +385,7 @@ impl ClusterWeightedGraphRust {
                 *col_sums.entry(col).or_insert(0.0) += val;
             }
         }
-		
+
         // Confidence filtering
         let conf_set: HashSet<String> = confidence_levels
             .unwrap_or_else(|| vec!["A".into(), "B".into(), "C".into()])
@@ -429,8 +397,8 @@ impl ClusterWeightedGraphRust {
 
         for tf in &all_tfs {
             if let Some(&global_idx) = gene_to_global_idx.get(tf) {
-                let tf_mean = col_sums.get(&global_idx).copied().unwrap_or(0.0)
-                    / n_cluster_cells as f64;
+                let tf_mean =
+                    col_sums.get(&global_idx).copied().unwrap_or(0.0) / n_cluster_cells as f64;
                 if tf_mean > tf_expr_threshold {
                     expressed_tfs.insert(tf.clone(), tf_mean);
                 }
@@ -446,7 +414,11 @@ impl ClusterWeightedGraphRust {
         let mut target_expr: HashMap<String, f64> = HashMap::new();
         let mut skipped_count = 0usize;
 
-        for (idx, (src, tgt)) in dorothea_sources.iter().zip(dorothea_targets.iter()).enumerate() {
+        for (idx, (src, tgt)) in dorothea_sources
+            .iter()
+            .zip(dorothea_targets.iter())
+            .enumerate()
+        {
             let tf_mean = match expressed_tfs.get(src) {
                 Some(&v) => v,
                 None => continue,
@@ -462,8 +434,8 @@ impl ClusterWeightedGraphRust {
                 None => continue,
             };
 
-            let tgt_mean = col_sums.get(&tgt_global_idx).copied().unwrap_or(0.0)
-                / n_cluster_cells as f64;
+            let tgt_mean =
+                col_sums.get(&tgt_global_idx).copied().unwrap_or(0.0) / n_cluster_cells as f64;
 
             if require_both_expressed {
                 if tgt_mean <= 0.0 || tf_mean <= 0.0 {
@@ -484,7 +456,12 @@ impl ClusterWeightedGraphRust {
             };
 
             edges_data.push((
-                src.clone(), tgt.clone(), d_weight, conf.clone(), beta, tgt_mean,
+                src.clone(),
+                tgt.clone(),
+                d_weight,
+                conf.clone(),
+                beta,
+                tgt_mean,
             ));
 
             pathway_genes_set.insert(src.clone());
@@ -507,8 +484,11 @@ impl ClusterWeightedGraphRust {
 
         let gene_global_indices: Vec<usize> = pathway_genes
             .iter()
-            .map(|g| *gene_to_global_idx.get(g)
-                .unwrap_or_else(|| panic!("Gene '{}' not found in adata.var_names!", g)))
+            .map(|g| {
+                *gene_to_global_idx
+                    .get(g)
+                    .unwrap_or_else(|| panic!("Gene '{}' not found in adata.var_names!", g))
+            })
             .collect();
 
         println!("Pathway genes: {}", pathway_genes.len());
@@ -520,11 +500,6 @@ impl ClusterWeightedGraphRust {
         let mut edge_tgt_local: Vec<usize> = Vec::with_capacity(edges_data.len());
         let mut dorothea_w: Vec<f64> = Vec::with_capacity(edges_data.len());
         let mut betas: Vec<f64> = Vec::with_capacity(edges_data.len());
-
-        // TF-TF edges & graph
-        let mut tf_tf_edges: Vec<TFEdge> = Vec::new();
-        let mut tf_graph: HashMap<String, Vec<(String, f64, f64)>> = HashMap::new();
-        let tf_set: HashSet<&String> = expressed_tfs.keys().collect();
 
         for (src, tgt, d_weight, conf, beta, _) in edges_data {
             let src_local = *gene_to_local_idx.get(&src).unwrap();
@@ -542,28 +517,11 @@ impl ClusterWeightedGraphRust {
             edge_tgt_local.push(tgt_local);
             dorothea_w.push(d_weight);
             betas.push(beta);
-
-            if tf_set.contains(&tgt) {
-                tf_tf_edges.push(TFEdge {
-                    source: src.clone(),
-                    target: tgt.clone(),
-                    beta,
-                    dorothea_weight: d_weight,
-                });
-
-                tf_graph
-                    .entry(src.clone())
-                    .or_insert_with(Vec::new)
-                    .push((tgt.clone(), beta, d_weight));
-            }
         }
-
-        println!("TF-TF edges: {}", tf_tf_edges.len());
 
         let pathway_name = format!("adata_{}{}", cluster_key, cluster_id);
         let n_genes = pathway_genes.len();
         let n_edges = edges.len();
-        let n_tf_tf_edges = tf_tf_edges.len();
 
         println!("✓ Network built (sparse): {}", pathway_name);
 
@@ -578,8 +536,6 @@ impl ClusterWeightedGraphRust {
             edge_tgt_local,
             dorothea_weights: dorothea_w,
             betas,
-            tf_tf_edges,
-            tf_graph,
             source_expr,
             target_expr,
             cluster_cells,
@@ -592,7 +548,6 @@ impl ClusterWeightedGraphRust {
             cluster_id: cluster_id.to_string(),
             n_genes,
             n_edges,
-            n_tf_tf_edges,
         })
     }
 
@@ -604,13 +559,14 @@ impl ClusterWeightedGraphRust {
         cell_idx: usize,
     ) -> PyResult<f64> {
         let expr = expr_matrix.as_array();
-        
-        let alpha: Vec<f64> = self.data.gene_global_indices
+
+        let alpha: Vec<f64> = self
+            .data
+            .gene_global_indices
             .iter()
             .map(|&global_idx| expr[[cell_idx, global_idx]])
             .collect();
 
-        // [수정] 전체 유전자 발현 총합
         let total_alpha_g: f64 = expr.row(cell_idx).iter().sum();
 
         let norm = compute_single_norm_internal(
@@ -621,11 +577,12 @@ impl ClusterWeightedGraphRust {
             self.data.beta_mode_dynamic,
             total_alpha_g,
         );
-        
+
         Ok(norm)
     }
-    
-    /// G2 norm calculation (parallel)
+
+    /// Calculate per-cell edge-L2 values from a dense matrix in parallel.
+    /// OPTIONAL PUBLIC API: not called by the current server.
     fn compute_all_norms(
         &self,
         py: Python<'_>,
@@ -633,13 +590,13 @@ impl ClusterWeightedGraphRust {
     ) -> PyResult<Py<PyArray1<f64>>> {
         let expr = expr_matrix.as_array();
         let n_cells = expr.shape()[0];
-        
+
         let gene_indices = &self.data.gene_global_indices;
         let edge_src = &self.data.edge_src_local;
         let edge_tgt = &self.data.edge_tgt_local;
         let dorothea_w = &self.data.dorothea_weights;
         let beta_dynamic = self.data.beta_mode_dynamic;
-        
+
         let norms: Vec<f64> = py.allow_threads(|| {
             (0..n_cells)
                 .into_par_iter()
@@ -649,7 +606,6 @@ impl ClusterWeightedGraphRust {
                         .map(|&global_idx| expr[[cell_idx, global_idx]])
                         .collect();
 
-                    // [수정] 전체 유전자 발현 총합
                     let total_alpha_g: f64 = expr.row(cell_idx).iter().sum();
 
                     compute_single_norm_internal(
@@ -663,11 +619,11 @@ impl ClusterWeightedGraphRust {
                 })
                 .collect()
         });
-        
+
         Ok(PyArray1::from_vec_bound(py, norms).into())
     }
-
-    /// G2 norm calculation (parallel, sparse)
+    /// Calculate per-cell edge-L2 values from a sparse matrix in parallel.
+    /// OPTIONAL PUBLIC API: not called by the current server.
     fn compute_all_norms_sparse(
         &self,
         py: Python<'_>,
@@ -682,7 +638,8 @@ impl ClusterWeightedGraphRust {
         let dorothea_w = &self.data.dorothea_weights;
         let beta_dynamic = self.data.beta_mode_dynamic;
 
-        let global_to_local: HashMap<usize, usize> = gene_indices.iter()
+        let global_to_local: HashMap<usize, usize> = gene_indices
+            .iter()
             .enumerate()
             .map(|(local, &global)| (global, local))
             .collect();
@@ -694,7 +651,6 @@ impl ClusterWeightedGraphRust {
                 .map(|cell_idx| {
                     let mut alpha = vec![0.0f64; n_local];
                     let row = csr.row(cell_idx);
-                    // [수정] sparse row 전체 합 = 전체 유전자 발현 총합
                     let total_alpha_g: f64 = row.values().iter().sum();
                     for (&col, &val) in row.col_indices().iter().zip(row.values().iter()) {
                         if let Some(&local) = global_to_local.get(&col) {
@@ -702,7 +658,11 @@ impl ClusterWeightedGraphRust {
                         }
                     }
                     compute_single_norm_internal(
-                        &alpha, edge_src, edge_tgt, dorothea_w, beta_dynamic,
+                        &alpha,
+                        edge_src,
+                        edge_tgt,
+                        dorothea_w,
+                        beta_dynamic,
                         total_alpha_g,
                     )
                 })
@@ -711,22 +671,22 @@ impl ClusterWeightedGraphRust {
 
         Ok(PyArray1::from_vec_bound(py, norms).into())
     }
-
-    /// G2 norm calculation for specific cell cluster activity
+    /// Calculate dense-matrix edge-L2 values for stored cluster cells.
+    /// OPTIONAL PUBLIC API: not called by the current server.
     fn compute_cluster_norms(
         &self,
         py: Python<'_>,
         expr_matrix: PyReadonlyArray2<f64>,
     ) -> PyResult<Py<PyArray1<f64>>> {
         let expr = expr_matrix.as_array();
-        
+
         let gene_indices = &self.data.gene_global_indices;
         let edge_src = &self.data.edge_src_local;
         let edge_tgt = &self.data.edge_tgt_local;
         let dorothea_w = &self.data.dorothea_weights;
         let beta_dynamic = self.data.beta_mode_dynamic;
         let cluster_cells = &self.data.cluster_cells;
-        
+
         let norms: Vec<f64> = py.allow_threads(|| {
             cluster_cells
                 .par_iter()
@@ -736,7 +696,6 @@ impl ClusterWeightedGraphRust {
                         .map(|&global_idx| expr[[cell_idx, global_idx]])
                         .collect();
 
-                    // [수정] 전체 유전자 발현 총합
                     let total_alpha_g: f64 = expr.row(cell_idx).iter().sum();
 
                     compute_single_norm_internal(
@@ -750,11 +709,11 @@ impl ClusterWeightedGraphRust {
                 })
                 .collect()
         });
-        
+
         Ok(PyArray1::from_vec_bound(py, norms).into())
     }
-    
-    /// G2 norm for cluster cells only (sparse)
+    /// Calculate sparse-matrix edge-L2 values for stored cluster cells.
+    /// OPTIONAL PUBLIC API: not called by the current server.
     fn compute_cluster_norms_sparse(
         &self,
         py: Python<'_>,
@@ -769,7 +728,8 @@ impl ClusterWeightedGraphRust {
         let beta_dynamic = self.data.beta_mode_dynamic;
         let cluster_cells = &self.data.cluster_cells;
 
-        let global_to_local: HashMap<usize, usize> = gene_indices.iter()
+        let global_to_local: HashMap<usize, usize> = gene_indices
+            .iter()
             .enumerate()
             .map(|(local, &global)| (global, local))
             .collect();
@@ -781,7 +741,7 @@ impl ClusterWeightedGraphRust {
                 .map(|&cell_idx| {
                     let mut alpha = vec![0.0f64; n_local];
                     let row = csr.row(cell_idx);
-                    // [수정] sparse row 전체 합 = 전체 유전자 발현 총합
+                    // Corrected: the full sparse-row sum equals total expression across all genes.
                     let total_alpha_g: f64 = row.values().iter().sum();
                     for (&col, &val) in row.col_indices().iter().zip(row.values().iter()) {
                         if let Some(&local) = global_to_local.get(&col) {
@@ -789,7 +749,11 @@ impl ClusterWeightedGraphRust {
                         }
                     }
                     compute_single_norm_internal(
-                        &alpha, edge_src, edge_tgt, dorothea_w, beta_dynamic,
+                        &alpha,
+                        edge_src,
+                        edge_tgt,
+                        dorothea_w,
+                        beta_dynamic,
                         total_alpha_g,
                     )
                 })
@@ -800,189 +764,54 @@ impl ClusterWeightedGraphRust {
     }
 
     /// Return cluster cell indices
+    /// OPTIONAL PUBLIC API: not called by the current server.
     fn get_cluster_cells(&self, _py: Python<'_>) -> PyResult<Vec<usize>> {
         Ok(self.data.cluster_cells.clone())
     }
-    
-    /// Finding Greedy Max-Beta Path
-    #[pyo3(signature = (beta_threshold = 0.5, max_length = 50, top_n_starts = 1))]
-    fn find_greedy_max_beta_path(
-        &self,
-        py: Python<'_>,
-        beta_threshold: f64,
-        max_length: usize,
-        top_n_starts: usize,
-    ) -> PyResult<PyObject> {
-        let result_dict = PyDict::new_bound(py);
-        
-        if self.data.tf_tf_edges.is_empty() {
-            result_dict.set_item("path", Vec::<String>::new())?;
-            result_dict.set_item("betas", Vec::<f64>::new())?;
-            result_dict.set_item("total_beta", 0.0)?;
-            result_dict.set_item("length", 0)?;
-            result_dict.set_item("all_paths", Vec::<PyObject>::new())?;
-            return Ok(result_dict.into());
-        }
-        
-        // Beta-sorted starting edges
-        let mut sorted_edges = self.data.tf_tf_edges.clone();
-        sorted_edges.sort_by(|a, b| b.beta.partial_cmp(&a.beta).unwrap());
-        
-        let mut all_paths: Vec<GreedyPathResult> = Vec::new();
-        let mut used_starts: HashSet<String> = HashSet::new();
-        
-        for edge in sorted_edges.iter().take(top_n_starts * 3) {
-            if used_starts.contains(&edge.source) {
-                continue;
-            }
-            if all_paths.len() >= top_n_starts {
-                break;
-            }
-            
-            used_starts.insert(edge.source.clone());
-            
-            let path_result = self.find_single_greedy_path(
-                &edge.source,
-                beta_threshold,
-                max_length,
-            );
-            
-            if path_result.length >= 2 {
-                all_paths.push(path_result);
-            }
-        }
-        
-        // Best path
-        let best_path = all_paths.iter()
-            .max_by(|a, b| a.total_beta.partial_cmp(&b.total_beta).unwrap())
-            .cloned()
-            .unwrap_or(GreedyPathResult {
-                path: Vec::new(),
-                betas: Vec::new(),
-                total_beta: 0.0,
-                length: 0,
-            });
-        
-        result_dict.set_item("path", best_path.path)?;
-        result_dict.set_item("betas", best_path.betas)?;
-        result_dict.set_item("total_beta", best_path.total_beta)?;
-        result_dict.set_item("length", best_path.length)?;
-        
-        // Converse all_paths to PyObject list
-        let all_paths_py: Vec<PyObject> = all_paths.iter().map(|p| {
-            let d = PyDict::new_bound(py);
-            d.set_item("path", p.path.clone()).unwrap();
-            d.set_item("betas", p.betas.clone()).unwrap();
-            d.set_item("total_beta", p.total_beta).unwrap();
-            d.set_item("length", p.length).unwrap();
-            d.into()
-        }).collect();
-        
-        result_dict.set_item("all_paths", all_paths_py)?;
-        
-        Ok(result_dict.into())
-    }
-    /// Finding Greedy Paths starting from all TFs.
 
-    #[pyo3(signature = (beta_threshold = 0.5, min_path_length = 3, max_length = 50))]
-    fn find_all_greedy_paths(
-        &self,
-        py: Python<'_>,
-        beta_threshold: f64,
-        min_path_length: usize,
-        max_length: usize,
-    ) -> PyResult<PyObject> {
-        let result_dict = PyDict::new_bound(py);
-        
-        let mut all_paths: Vec<GreedyPathResult> = Vec::new();
-        
-        // Starting from all TFs.
-        for tf in self.data.source_expr.keys() {
-            if self.data.tf_graph.contains_key(tf) {
-                let path_result = self.find_single_greedy_path(
-                    tf,
-                    beta_threshold,
-                    max_length,
-                );
-                
-                if path_result.length >= min_path_length {
-                    all_paths.push(path_result);
-                }
-            }
-        }
-        
-        // total_beta order
-        all_paths.sort_by(|a, b| b.total_beta.partial_cmp(&a.total_beta).unwrap());
-        
-        // DataFrame Conversion
-        let mut start_tfs: Vec<String> = Vec::new();
-        let mut paths: Vec<String> = Vec::new();
-        let mut lengths: Vec<usize> = Vec::new();
-        let mut total_betas: Vec<f64> = Vec::new();
-        let mut avg_betas: Vec<f64> = Vec::new();
-        
-        for p in &all_paths {
-            start_tfs.push(p.path.first().cloned().unwrap_or_default());
-            paths.push(p.path.join(" -> "));
-            lengths.push(p.length);
-            total_betas.push(p.total_beta);
-            avg_betas.push(if p.betas.is_empty() { 0.0 } else { 
-                p.total_beta / p.betas.len() as f64 
-            });
-        }
-        
-        result_dict.set_item("start_tf", start_tfs)?;
-        result_dict.set_item("path", paths)?;
-        result_dict.set_item("length", lengths)?;
-        result_dict.set_item("total_beta", total_betas)?;
-        result_dict.set_item("avg_beta", avg_betas)?;
-        
-        Ok(result_dict.into())
-    }
-    
     /// Return Pathway genes
     fn get_pathway_genes(&self, _py: Python<'_>) -> PyResult<Vec<String>> {
         Ok(self.data.pathway_genes.clone())
     }
-    
+
     /// Return Edge information for DataFrame
     fn get_edges_data(&self, py: Python<'_>) -> PyResult<PyObject> {
         let dict = PyDict::new_bound(py);
-        
-        let sources: Vec<String> = self.data.edges
+
+        let sources: Vec<String> = self
+            .data
+            .edges
             .iter()
             .map(|e| self.data.pathway_genes[e.source_local].clone())
             .collect();
-        
-        let targets: Vec<String> = self.data.edges
+
+        let targets: Vec<String> = self
+            .data
+            .edges
             .iter()
             .map(|e| self.data.pathway_genes[e.target_local].clone())
             .collect();
-        
-        let dorothea_w: Vec<f64> = self.data.edges
-            .iter()
-            .map(|e| e.dorothea_weight)
-            .collect();
-        
-        let betas: Vec<f64> = self.data.edges
-            .iter()
-            .map(|e| e.beta)
-            .collect();
-        
-        let confidences: Vec<String> = self.data.edges
+
+        let dorothea_w: Vec<f64> = self.data.edges.iter().map(|e| e.dorothea_weight).collect();
+
+        let betas: Vec<f64> = self.data.edges.iter().map(|e| e.beta).collect();
+
+        let confidences: Vec<String> = self
+            .data
+            .edges
             .iter()
             .map(|e| e.confidence.clone())
             .collect();
-        
+
         dict.set_item("source", sources)?;
         dict.set_item("target", targets)?;
         dict.set_item("dorothea_weight", dorothea_w)?;
         dict.set_item("beta", betas)?;
         dict.set_item("confidence", confidences)?;
-        
+
         Ok(dict.into())
     }
-    
+
     /// Return Source expression
     fn get_source_expr(&self, py: Python<'_>) -> PyResult<PyObject> {
         let dict = PyDict::new_bound(py);
@@ -991,7 +820,7 @@ impl ClusterWeightedGraphRust {
         }
         Ok(dict.into())
     }
-    
+
     /// Return Target expression
     fn get_target_expr(&self, py: Python<'_>) -> PyResult<PyObject> {
         let dict = PyDict::new_bound(py);
@@ -1000,106 +829,18 @@ impl ClusterWeightedGraphRust {
         }
         Ok(dict.into())
     }
-    
-    /// Extract only TF-TF edges
-    fn get_tf_tf_edges(&self, py: Python<'_>) -> PyResult<PyObject> {
-        let dict = PyDict::new_bound(py);
-        
-        let sources: Vec<String> = self.data.tf_tf_edges
-            .iter()
-            .map(|e| e.source.clone())
-            .collect();
-        
-        let targets: Vec<String> = self.data.tf_tf_edges
-            .iter()
-            .map(|e| e.target.clone())
-            .collect();
-        
-        let dorothea_w: Vec<f64> = self.data.tf_tf_edges
-            .iter()
-            .map(|e| e.dorothea_weight)
-            .collect();
-        
-        let betas: Vec<f64> = self.data.tf_tf_edges
-            .iter()
-            .map(|e| e.beta)
-            .collect();
-        
-        dict.set_item("source", sources)?;
-        dict.set_item("target", targets)?;
-        dict.set_item("dorothea_weight", dorothea_w)?;
-        dict.set_item("beta", betas)?;
-        
-        Ok(dict.into())
-    }
-    
+
     fn __repr__(&self) -> String {
         format!(
-            "ClusterWeightedGraphRust('{}', genes={}, edges={}, tf_tf_edges={})",
-            self.pathway_name, self.n_genes, self.n_edges, self.n_tf_tf_edges
+            "ClusterWeightedGraphRust('{}', genes={}, edges={})",
+            self.pathway_name, self.n_genes, self.n_edges
         )
     }
 }
 
 // =============================================================
-// 내부 메서드 (Python에 노출 안됨)
-// =============================================================
-
-impl ClusterWeightedGraphRust {
-    /// 단일 시작점에서 Greedy Path 찾기
-    fn find_single_greedy_path(
-        &self,
-        start_tf: &str,
-        beta_threshold: f64,
-        max_length: usize,
-    ) -> GreedyPathResult {
-        let mut path: Vec<String> = vec![start_tf.to_string()];
-        let mut betas: Vec<f64> = Vec::new();
-        let mut visited: HashSet<String> = HashSet::new();
-        visited.insert(start_tf.to_string());
-        
-        let mut current = start_tf.to_string();
-        
-        while path.len() < max_length {
-            // 현재 노드에서 나가는 edges
-            let next_edges = match self.data.tf_graph.get(&current) {
-                Some(edges) => edges,
-                None => break,
-            };
-            
-            // 방문하지 않은 것 중 최대 beta 선택
-            let best_next = next_edges
-                .iter()
-                .filter(|(tgt, beta, _)| {
-                    !visited.contains(tgt) && *beta >= beta_threshold
-                })
-                .max_by(|a, b| a.1.partial_cmp(&b.1).unwrap());
-            
-            match best_next {
-                Some((next_tf, beta, _)) => {
-                    path.push(next_tf.clone());
-                    betas.push(*beta);
-                    visited.insert(next_tf.clone());
-                    current = next_tf.clone();
-                }
-                None => break,
-            }
-        }
-        
-        let total_beta: f64 = betas.iter().sum();
-        let length = path.len();
-        
-        GreedyPathResult {
-            path,
-            betas,
-            total_beta,
-            length,
-        }
-    }
-}
-
-// =============================================================
-// 내부 계산 함수
+// Shared edge-L2 calculation used by optional dense and sparse CWG norm APIs.
+// This is distinct from build_conservative_graph(), which aggregates path means.
 // =============================================================
 
 #[inline]
@@ -1109,38 +850,41 @@ fn compute_single_norm_internal(
     edge_tgt: &[usize],
     edge_dorothea_weights: &[f64],
     beta_mode_dynamic: bool,
-    total_alpha_g: f64,  // 전체 유전자 발현 총합 (pathway 한정 X)
+    total_alpha_g: f64, // Total expression across all genes, not restricted to the pathway.
 ) -> f64 {
     let alpha_g = total_alpha_g;
 
     if alpha_g < 1e-10 {
         return 0.0;
     }
-    
+
     let alpha_g_sq = alpha_g * alpha_g;
     let mut norm_sq = 0.0;
-    
+
     for idx in 0..edge_src.len() {
         let i = edge_src[idx];
         let j = edge_tgt[idx];
         let alpha_i = alpha[i];
         let alpha_j = alpha[j];
-        
+
         let beta_ij = if beta_mode_dynamic {
-            (alpha_i + alpha_j + edge_dorothea_weights[idx]).abs().sqrt()
+            (alpha_i + alpha_j + edge_dorothea_weights[idx])
+                .abs()
+                .sqrt()
         } else {
             edge_dorothea_weights[idx]
         };
-        
+
         let coeff = (alpha_i * alpha_j) / alpha_g_sq;
         norm_sq += coeff * beta_ij * beta_ij;
     }
-    
+
     norm_sq.sqrt()
 }
 
 // =============================================================
-// 배치 처리 함수
+// Optional batch CWG APIs retained for wrapper.py compatibility.
+// These functions are exported through PyO3 but are not called by the current server.
 // =============================================================
 
 #[pyfunction]
@@ -1151,9 +895,9 @@ fn compute_all_cwg_norms(
 ) -> PyResult<PyObject> {
     let expr = expr_matrix.as_array();
     let n_cells = expr.shape()[0];
-    
+
     let result_dict = PyDict::new_bound(py);
-    
+
     for cwg in cwg_list.iter() {
         let gene_indices = &cwg.data.gene_global_indices;
         let edge_src = &cwg.data.edge_src_local;
@@ -1161,7 +905,7 @@ fn compute_all_cwg_norms(
         let dorothea_w = &cwg.data.dorothea_weights;
         let beta_dynamic = cwg.data.beta_mode_dynamic;
         let col_name = format!("{}_G2", cwg.pathway_name);
-        
+
         let norms: Vec<f64> = py.allow_threads(|| {
             (0..n_cells)
                 .into_par_iter()
@@ -1171,7 +915,6 @@ fn compute_all_cwg_norms(
                         .map(|&global_idx| expr[[cell_idx, global_idx]])
                         .collect();
 
-                    // [수정] 전체 유전자 발현 총합
                     let total_alpha_g: f64 = expr.row(cell_idx).iter().sum();
 
                     compute_single_norm_internal(
@@ -1185,14 +928,14 @@ fn compute_all_cwg_norms(
                 })
                 .collect()
         });
-        
+
         result_dict.set_item(col_name, PyArray1::from_vec_bound(py, norms))?;
     }
-    
+
     Ok(result_dict.into())
 }
 
-/// 클러스터 세포만의 norm 배치 계산
+/// Batch norm calculation for cluster cells only
 #[pyfunction]
 fn compute_cluster_cwg_norms(
     py: Python<'_>,
@@ -1201,7 +944,7 @@ fn compute_cluster_cwg_norms(
 ) -> PyResult<PyObject> {
     let expr = expr_matrix.as_array();
     let result_dict = PyDict::new_bound(py);
-    
+
     for cwg in cwg_list.iter() {
         let gene_indices = &cwg.data.gene_global_indices;
         let edge_src = &cwg.data.edge_src_local;
@@ -1210,24 +953,34 @@ fn compute_cluster_cwg_norms(
         let beta_dynamic = cwg.data.beta_mode_dynamic;
         let cluster_cells = &cwg.data.cluster_cells;
         let col_name = format!("{}_cluster_G2", cwg.pathway_name);
-        
+
         let norms: Vec<f64> = py.allow_threads(|| {
-            cluster_cells.par_iter().map(|&cell_idx| {
-                let alpha: Vec<f64> = gene_indices.iter().map(|&g| expr[[cell_idx, g]]).collect();
-                // [수정] 전체 유전자 발현 총합
-                let total_alpha_g: f64 = expr.row(cell_idx).iter().sum();
-                compute_single_norm_internal(&alpha, edge_src, edge_tgt, dorothea_w, beta_dynamic,
-                    total_alpha_g)
-            }).collect()
+            cluster_cells
+                .par_iter()
+                .map(|&cell_idx| {
+                    let alpha: Vec<f64> =
+                        gene_indices.iter().map(|&g| expr[[cell_idx, g]]).collect();
+                    // Sum expression across all genes for normalization.
+                    let total_alpha_g: f64 = expr.row(cell_idx).iter().sum();
+                    compute_single_norm_internal(
+                        &alpha,
+                        edge_src,
+                        edge_tgt,
+                        dorothea_w,
+                        beta_dynamic,
+                        total_alpha_g,
+                    )
+                })
+                .collect()
         });
-        
+
         result_dict.set_item(col_name, PyArray1::from_vec_bound(py, norms))?;
     }
     Ok(result_dict.into())
 }
 
 // =============================================================
-// 배치 처리 함수 (sparse)
+// Sparse batch processing functions
 // =============================================================
 
 #[pyfunction]
@@ -1249,7 +1002,8 @@ fn compute_all_cwg_norms_sparse(
         let beta_dynamic = cwg.data.beta_mode_dynamic;
         let col_name = format!("{}_G2", cwg.pathway_name);
 
-        let global_to_local: HashMap<usize, usize> = gene_indices.iter()
+        let global_to_local: HashMap<usize, usize> = gene_indices
+            .iter()
             .enumerate()
             .map(|(local, &global)| (global, local))
             .collect();
@@ -1261,7 +1015,7 @@ fn compute_all_cwg_norms_sparse(
                 .map(|cell_idx| {
                     let mut alpha = vec![0.0f64; n_local];
                     let row = csr.row(cell_idx);
-                    // [수정] sparse row 전체 합 = 전체 유전자 발현 총합
+                    // The full sparse-row sum is total expression across all genes.
                     let total_alpha_g: f64 = row.values().iter().sum();
                     for (&col, &val) in row.col_indices().iter().zip(row.values().iter()) {
                         if let Some(&local) = global_to_local.get(&col) {
@@ -1269,7 +1023,11 @@ fn compute_all_cwg_norms_sparse(
                         }
                     }
                     compute_single_norm_internal(
-                        &alpha, edge_src, edge_tgt, dorothea_w, beta_dynamic,
+                        &alpha,
+                        edge_src,
+                        edge_tgt,
+                        dorothea_w,
+                        beta_dynamic,
                         total_alpha_g,
                     )
                 })
@@ -1282,7 +1040,7 @@ fn compute_all_cwg_norms_sparse(
     Ok(result_dict.into())
 }
 
-/// 클러스터 세포만의 norm 배치 계산 (sparse)
+/// Sparse batch norm calculation for cluster cells only
 #[pyfunction]
 fn compute_cluster_cwg_norms_sparse(
     py: Python<'_>,
@@ -1301,75 +1059,95 @@ fn compute_cluster_cwg_norms_sparse(
         let cluster_cells = &cwg.data.cluster_cells;
         let col_name = format!("{}_cluster_G2", cwg.pathway_name);
 
-        let global_to_local: HashMap<usize, usize> = gene_indices.iter()
+        let global_to_local: HashMap<usize, usize> = gene_indices
+            .iter()
             .enumerate()
             .map(|(local, &global)| (global, local))
             .collect();
         let n_local = gene_indices.len();
 
         let norms: Vec<f64> = py.allow_threads(|| {
-            cluster_cells.par_iter().map(|&cell_idx| {
-                let mut alpha = vec![0.0f64; n_local];
-                let row = csr.row(cell_idx);
-                // [수정] sparse row 전체 합 = 전체 유전자 발현 총합
-                let total_alpha_g: f64 = row.values().iter().sum();
-                for (&col, &val) in row.col_indices().iter().zip(row.values().iter()) {
-                    if let Some(&local) = global_to_local.get(&col) {
-                        alpha[local] = val;
+            cluster_cells
+                .par_iter()
+                .map(|&cell_idx| {
+                    let mut alpha = vec![0.0f64; n_local];
+                    let row = csr.row(cell_idx);
+                    // Corrected: the full sparse-row sum equals total expression across all genes.
+                    let total_alpha_g: f64 = row.values().iter().sum();
+                    for (&col, &val) in row.col_indices().iter().zip(row.values().iter()) {
+                        if let Some(&local) = global_to_local.get(&col) {
+                            alpha[local] = val;
+                        }
                     }
-                }
-                compute_single_norm_internal(&alpha, edge_src, edge_tgt, dorothea_w, beta_dynamic,
-                    total_alpha_g)
-            }).collect()
+                    compute_single_norm_internal(
+                        &alpha,
+                        edge_src,
+                        edge_tgt,
+                        dorothea_w,
+                        beta_dynamic,
+                        total_alpha_g,
+                    )
+                })
+                .collect()
         });
 
         result_dict.set_item(col_name, PyArray1::from_vec_bound(py, norms))?;
     }
     Ok(result_dict.into())
 }
+/// Aggregate prior TF-target edges over path-mean expression profiles.
+/// CURRENT SERVER PATH: graph_utils.py calls this.
+/// beta_threshold filters support within each path and threshold specifies the
+/// minimum fraction of input paths that must support an edge.
+///
+/// In all-edge mode, for path Γ and edge (i,j):
+///   beta_ij(Γ) = sqrt(abs(alpha_i(Γ) + alpha_j(Γ) + prior_weight_ij))
+///   contribution_ij(Γ) = alpha_i(Γ) * alpha_j(Γ) * beta_ij(Γ)^2
+///                        / alpha_G(Γ)^2
+/// where alpha values are means over cells visited by Γ and alpha_G is the
+/// corresponding mean total expression across all genes. Each edge can add at
+/// most one support count per input path in this mode.
+///
+/// Rust returns count, freq, mean_beta, mean_contribution and mean alpha values.
+/// graph_utils.py subsequently computes score = freq * mean_beta and performs
+/// score-based ranking.
 #[pyfunction]
 #[pyo3(signature = (
     cwg,
     reduced_paths,
     sparse_matrix,
-    use_greedy      = false,
     beta_threshold  = 0.0,
-    min_path_length = 2,
-    max_length      = 50,
     threshold       = 0.5,
 ))]
 fn build_conservative_graph(
     py: Python<'_>,
-    mut cwg: PyRefMut<'_, ClusterWeightedGraphRust>,
+    cwg: PyRef<'_, ClusterWeightedGraphRust>,
     reduced_paths: Vec<Vec<usize>>,
     sparse_matrix: &Bound<'_, PyAny>,
-    use_greedy: bool,
     beta_threshold: f64,
-    min_path_length: usize,
-    max_length: usize,
     threshold: f64,
 ) -> PyResult<PyObject> {
-
-    // ── CSR 변환: 여기서 딱 1회 ─────────────────────────────────
+    // ── Convert to CSR exactly once here ───────────────────────
     let csr = csr_to_rust(sparse_matrix)?;
 
     let total = reduced_paths.len();
     // (source_local, target_local) → (count, beta_sum)
-    // beta_sum: 누적해서 마지막에 mean_beta = beta_sum / count 계산
+    // beta_sum is divided by support count to obtain mean_beta.
     let mut edge_counter: HashMap<(usize, usize), (usize, f64, f64, f64, f64)> = HashMap::new();
     // (count, beta_sum, contrib_sum, alpha_i_sum, alpha_j_sum)
-    
+
     for (path_idx, path) in reduced_paths.iter().enumerate() {
         let n_cells = path.len();
         if n_cells == 0 {
-            return Err(PyErr::new::<PyValueError, _>(
-                format!("reduced_paths[{}] is empty. All paths must contain at least one cell index.", path_idx)
-            ));
+            return Err(PyErr::new::<PyValueError, _>(format!(
+                "reduced_paths[{}] is empty. All paths must contain at least one cell index.",
+                path_idx
+            )));
         }
         let n = n_cells as f64;
 
-        // ── 1. col_sums: path 세포들의 gene별 발현 합산 ──────────
-        // &csr 참조만, 복사 없음
+        // ── 1. col_sums: sum expression by gene across path cells ─
+        // Borrow &csr without copying.
         let mut col_sums: HashMap<usize, f64> = HashMap::new();
         for &cell_idx in path {
             let row = csr.row(cell_idx);
@@ -1377,182 +1155,68 @@ fn build_conservative_graph(
                 *col_sums.entry(col).or_insert(0.0) += val;
             }
         }
-	
-	let total_sum: f64 = col_sums.values().sum();
-	let alpha_g_mean = total_sum / n;
-	let alpha_g_sq = alpha_g_mean * alpha_g_mean;
-	
-        if !use_greedy {
+
+        let total_sum: f64 = col_sums.values().sum();
+        let alpha_g_mean = total_sum / n;
+        let alpha_g_sq = alpha_g_mean * alpha_g_mean;
+
+        {
             // ════════════════════════════════════════════════════
-            // 모든 edge 방식 (main)
-            // edges 전체(11994개) beta 갱신 후
-            // beta >= beta_threshold인 edge를 바로 카운트
-            // TF→non-TF 포함, 분기 표현 가능
+            // Evaluate every retained prior edge once for this path
             // ════════════════════════════════════════════════════
-            // 읽기 전용 값을 루프 전에 추출
-            // → edges[i] mutable borrow와 gene_global_indices immutable borrow 충돌 방지
-            let beta_dynamic = cwg.data.beta_mode_dynamic;
-            let n_edges      = cwg.data.edges.len();
+            let n_edges = cwg.data.edges.len();
 
             for i in 0..n_edges {
-                // ① 읽기: source_local, target_local, dorothea_weight
-                let src_local  = cwg.data.edges[i].source_local;
-                let tgt_local  = cwg.data.edges[i].target_local;
+                let src_local = cwg.data.edges[i].source_local;
+                let tgt_local = cwg.data.edges[i].target_local;
                 let dorothea_w = cwg.data.edges[i].dorothea_weight;
 
-                // ② 읽기: global index 변환 (edges[i] borrow 종료 후)
                 let src_g = cwg.data.gene_global_indices[src_local];
                 let tgt_g = cwg.data.gene_global_indices[tgt_local];
 
-                let tf_m  = col_sums.get(&src_g).copied().unwrap_or(0.0) / n;
+                let tf_m = col_sums.get(&src_g).copied().unwrap_or(0.0) / n;
                 let tgt_m = col_sums.get(&tgt_g).copied().unwrap_or(0.0) / n;
 
-		let new_beta   = (tf_m + tgt_m + dorothea_w).abs().sqrt();
-		let contrib    = if alpha_g_mean > 1e-10 {
-		    (tf_m * tgt_m / alpha_g_sq) * (new_beta * new_beta)
-		    // beta² = tf_m + tgt_m + dorothea_w 의 절댓값 이므로 .abs() 필요
-		} else { 0.0 };
-
-		if new_beta >= beta_threshold {
-		    let entry = edge_counter
-		        .entry((src_local, tgt_local))
-		        .or_insert((0, 0.0, 0.0, 0.0, 0.0));
-		    entry.0 += 1;
-		    entry.1 += new_beta;
-		    entry.2 += contrib;
-		    entry.3 += tf_m;   // alpha_i 누적
-		    entry.4 += tgt_m;  // alpha_j 누적
-		}
-            }
-
-        } else {
-            // ════════════════════════════════════════════════════
-            // greedy path 방식 (option)
-            // tf_tf_edges(427개) beta 갱신 → tf_graph 재구성
-            // → greedy path 상의 edge만 카운트
-            // TF→TF cascade 방향 선호
-            // ════════════════════════════════════════════════════
-
-            // 3-a. tf_tf_edges beta 갱신
-            // 읽기 전용 값을 루프 전에 추출
-            // → tf_tf_edges[i] mutable borrow와 gene_to_local_idx/gene_global_indices borrow 충돌 방지
-            let beta_dynamic  = cwg.data.beta_mode_dynamic;
-            let n_tf_edges    = cwg.data.tf_tf_edges.len();
-
-            for i in 0..n_tf_edges {
-                let src_name   = cwg.data.tf_tf_edges[i].source.clone();
-                let tgt_name   = cwg.data.tf_tf_edges[i].target.clone();
-                let dorothea_w = cwg.data.tf_tf_edges[i].dorothea_weight;
-
-                // tf_tf_edges[i] borrow 종료 후 다른 필드 접근
-                let src_local  = cwg.data.gene_to_local_idx[&src_name];
-                let tgt_local  = cwg.data.gene_to_local_idx[&tgt_name];
-                let src_g      = cwg.data.gene_global_indices[src_local];
-                let tgt_g      = cwg.data.gene_global_indices[tgt_local];
-
-                let tf_m  = col_sums.get(&src_g).copied().unwrap_or(0.0) / n;
-                let tgt_m = col_sums.get(&tgt_g).copied().unwrap_or(0.0) / n;
-
-                // 쓰기: 앞의 모든 읽기 borrow 종료 후 안전
-                cwg.data.tf_tf_edges[i].beta = if beta_dynamic {
-                    (tf_m + tgt_m + dorothea_w).abs().sqrt()
+                let new_beta = (tf_m + tgt_m + dorothea_w).abs().sqrt();
+                let contrib = if alpha_g_mean > 1e-10 {
+                    (tf_m * tgt_m / alpha_g_sq) * (new_beta * new_beta)
+                    // Squaring beta recovers abs(tf_m + tgt_m + dorothea_w).
                 } else {
-                    dorothea_w
+                    0.0
                 };
-            }
 
-            // 3-b. tf_graph 재구성 (427개)
-            // tf_tf_edges를 먼저 Vec으로 수집 후 tf_graph에 삽입
-            // → &tf_tf_edges(immutable)와 &mut tf_graph(mutable) 동시 borrow 방지
-            let tf_graph_entries: Vec<(String, String, f64, f64)> = cwg.data.tf_tf_edges
-                .iter()
-                .map(|e| (e.source.clone(), e.target.clone(), e.beta, e.dorothea_weight))
-                .collect();
-
-            cwg.data.tf_graph.clear();
-            for (src, tgt, beta, w) in tf_graph_entries {
-                cwg.data.tf_graph
-                    .entry(src)
-                    .or_insert_with(Vec::new)
-                    .push((tgt, beta, w));
-            }
-
-            // 3-c. 모든 expressed TF에서 greedy path 탐색 → edge 카운트
-            for start_tf in cwg.data.source_expr.keys() {
-                if !cwg.data.tf_graph.contains_key(start_tf) {
-                    continue;
-                }
-
-                let mut path_nodes: Vec<String> = vec![start_tf.clone()];
-                let mut visited: HashSet<&str> = HashSet::new();
-                visited.insert(start_tf.as_str());
-                let mut current = start_tf.as_str();
-
-                while path_nodes.len() < max_length {
-                    let next_edges = match cwg.data.tf_graph.get(current) {
-                        Some(e) => e,
-                        None => break,
-                    };
-                    let best = next_edges
-                        .iter()
-                        .filter(|(tgt, beta, _)| {
-                            !visited.contains(tgt.as_str()) && *beta >= beta_threshold
-                        })
-                        .max_by(|a, b| a.1.partial_cmp(&b.1).unwrap());
-                    match best {
-                        Some((next_tf, _, _)) => {
-                            visited.insert(next_tf.as_str());
-                            path_nodes.push(next_tf.clone());
-                            current = path_nodes.last().unwrap().as_str();
-                        }
-                        None => break,
-                    }
-                }
-
-                if path_nodes.len() < min_path_length {
-                    continue;
-                }
-
-                for w in path_nodes.windows(2) {
-                    if let (Some(&s), Some(&t)) = (
-                        cwg.data.gene_to_local_idx.get(&w[0]),
-                        cwg.data.gene_to_local_idx.get(&w[1]),
-                    ) {
-                        // tf_graph에서 해당 edge의 beta 조회
-                        let edge_beta = cwg.data.tf_graph
-                            .get(&w[0])
-                            .and_then(|edges| edges.iter().find(|(tgt, _, _)| tgt == &w[1]))
-                            .map(|(_, b, _)| *b)
-                            .unwrap_or(0.0);
-                        let entry = edge_counter.entry((s, t)).or_insert((0, 0.0, 0.0, 0.0, 0.0));
-                        entry.0 += 1;
-                        entry.1 += edge_beta;
-			 //entry.2 += contrib			
-                        // TODO:: If beta-greedy is needed
-                    }
+                if new_beta >= beta_threshold {
+                    let entry = edge_counter
+                        .entry((src_local, tgt_local))
+                        .or_insert((0, 0.0, 0.0, 0.0, 0.0));
+                    entry.0 += 1;
+                    entry.1 += new_beta;
+                    entry.2 += contrib;
+                    entry.3 += tf_m;
+                    entry.4 += tgt_m;
                 }
             }
         }
     }
 
-    // ── threshold 적용 → Python dict 반환 ────────────────────────
+    // Retain edges supported by at least the requested fraction of paths.
     let cutoff = ((total as f64) * threshold).ceil() as usize;
 
     let mut filtered: Vec<((usize, usize), (usize, f64, f64, f64, f64))> = edge_counter
         .into_iter()
         .filter(|(_, (cnt, _, _, _, _))| *cnt >= cutoff)
         .collect();
-    // count 내림차순 정렬
-    filtered.sort_by(|a, b| b.1.0.partial_cmp(&a.1.0).unwrap());
+    // Sort by support count in descending order.
+    filtered.sort_by(|a, b| b.1 .0.partial_cmp(&a.1 .0).unwrap());
 
-    let mut sources:    Vec<String> = Vec::new();
-    let mut targets:    Vec<String> = Vec::new();
-    let mut counts:     Vec<usize>  = Vec::new();
-    let mut freqs:      Vec<f64>    = Vec::new();
-    let mut mean_betas: Vec<f64>    = Vec::new();
+    let mut sources: Vec<String> = Vec::new();
+    let mut targets: Vec<String> = Vec::new();
+    let mut counts: Vec<usize> = Vec::new();
+    let mut freqs: Vec<f64> = Vec::new();
+    let mut mean_betas: Vec<f64> = Vec::new();
     let mut mean_contribs: Vec<f64> = Vec::new();
     let mut mean_alpha_is: Vec<f64> = Vec::new();
-    let mut mean_alpha_js: Vec<f64> = Vec::new(); 
+    let mut mean_alpha_js: Vec<f64> = Vec::new();
     for ((s_local, t_local), (cnt, beta_sum, contrib_sum, alpha_i_sum, alpha_j_sum)) in filtered {
         sources.push(cwg.data.pathway_genes[s_local].clone());
         targets.push(cwg.data.pathway_genes[t_local].clone());
@@ -1565,24 +1229,23 @@ fn build_conservative_graph(
     }
 
     let dict = PyDict::new_bound(py);
-    dict.set_item("source",      sources)?;
-    dict.set_item("target",      targets)?;
-    dict.set_item("count",       counts)?;
-    dict.set_item("freq",        freqs)?;
-    dict.set_item("mean_beta",   mean_betas)?;
+    dict.set_item("source", sources)?;
+    dict.set_item("target", targets)?;
+    dict.set_item("count", counts)?;
+    dict.set_item("freq", freqs)?;
+    dict.set_item("mean_beta", mean_betas)?;
     dict.set_item("mean_contribution", mean_contribs)?;
     dict.set_item("mean_alpha_i", mean_alpha_is)?;
     dict.set_item("mean_alpha_j", mean_alpha_js)?;
     dict.set_item("total_paths", total)?;
-    dict.set_item("threshold",   threshold)?;
-    dict.set_item("cutoff",      cutoff)?;
-    dict.set_item("mode",        if use_greedy { "greedy" } else { "all_edges" })?;
-
+    dict.set_item("threshold", threshold)?;
+    dict.set_item("cutoff", cutoff)?;
+    dict.set_item("mode", "all_edges")?;
 
     Ok(dict.into())
 }
 // =============================================================
-// 모듈 등록
+// Python module registration
 // =============================================================
 
 #[pymodule]
@@ -1593,22 +1256,26 @@ fn _cwg_rust(m: &Bound<'_, PyModule>) -> PyResult<()> {
     m.add_function(wrap_pyfunction!(compute_cluster_cwg_norms, m)?)?;
     m.add_function(wrap_pyfunction!(compute_all_cwg_norms_sparse, m)?)?;
     m.add_function(wrap_pyfunction!(compute_cluster_cwg_norms_sparse, m)?)?;
-    
-    // selective_integrated.rs
-    m.add_class::<selective_integrated::CascadePath>()?;
+
+    // KEGG pathway edge scoring
     m.add_class::<selective_integrated::KEGGPathway>()?;
-    m.add_class::<selective_integrated::SelectiveIntegratedGraph>()?;
-    m.add_function(wrap_pyfunction!(selective_integrated::make_kegg_edges_bidirectional, m)?)?;
-    m.add_function(wrap_pyfunction!(selective_integrated::build_all_integrated_graphs, m)?)?;
-    m.add_function(wrap_pyfunction!(selective_integrated::compute_all_kegg_norms_sparse, m)?)?;
-    m.add_function(wrap_pyfunction!(selective_integrated::compute_all_kegg_norms_cluster_mean, m)?)?;
-    m.add_function(wrap_pyfunction!(selective_integrated::compute_all_integrated_norms_sparse, m)?)?;
-    
+    m.add_function(wrap_pyfunction!(
+        selective_integrated::make_kegg_edges_bidirectional,
+        m
+    )?)?;
+    m.add_function(wrap_pyfunction!(
+        selective_integrated::compute_all_kegg_norms_sparse,
+        m
+    )?)?;
+    m.add_function(wrap_pyfunction!(
+        selective_integrated::compute_all_kegg_norms_cluster_mean,
+        m
+    )?)?;
+
     // astar_phate.rs
     m.add_function(wrap_pyfunction!(astar_phate::astar_all_pairs, m)?)?;
-    // test done :: m.add_function(wrap_pyfunction!(astar_phate::astar_all_pairs_legacy, m)?)?;
     // conservative graph
     m.add_function(wrap_pyfunction!(build_conservative_graph, m)?)?;
- 
+
     Ok(())
 }
