@@ -5,9 +5,10 @@ build-backend = "maturin"
 [project]
 name = "cwg-rust"
 version = "0.2.0"
-description = "Rust-accelerated ClusterWeightedGraph for TF cascade analysis"
-authors = [{name = "scMCP Team"}]
+description = "Rust-accelerated graph activity scoring and A* path computation for scGraphAgent"
+authors = [{name = "scGraphAgent authors"}]
 requires-python = ">=3.10"
+license="MIT"
 classifiers = [
     "Programming Language :: Rust",
     "Programming Language :: Python :: Implementation :: CPython",
@@ -16,7 +17,6 @@ dependencies = [
     "numpy>=1.24",
     "pandas>=2.0",
     "scipy>=1.10",
-    "together>=2.7.0",
 ]
 
 [tool.maturin]
