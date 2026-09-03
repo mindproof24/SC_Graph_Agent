@@ -960,7 +960,7 @@ async def get_cell_kegg_edges(
             cid = None
     if cid is None:
         anon = True
-        # 단일 cell 만으로 pathway score 계산 — leiden을 일시 컬럼으로 부착
+        # Calculate the pathway score for a single cell using a temporary Leiden column.
         adata.obs["__anon_single_cell__"] = pd.Series(
             ["X" if bc == cell_id else "Y" for bc in adata.obs.index],
             index=adata.obs.index,
