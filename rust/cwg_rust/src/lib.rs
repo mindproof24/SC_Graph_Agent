@@ -12,10 +12,10 @@ use hashbrown::{HashMap, HashSet};
 
 use crate::sparse_utils::csr_to_rust;
 // =============================================================
-// 핵심 데이터 구조
+// Core data structures
 // =============================================================
 
-/// Edge 정보
+/// Edge information
 #[derive(Clone, Debug)]
 struct Edge {
     source_local: usize,
@@ -23,24 +23,6 @@ struct Edge {
     dorothea_weight: f64,
     beta: f64,
     confidence: String,
-}
-
-/// TF-TF Edge 정보 (Greedy Path용)
-#[derive(Clone, Debug)]
-struct TFEdge {
-    source: String,
-    target: String,
-    beta: f64,
-    dorothea_weight: f64,
-}
-
-/// Greedy Path 결과
-#[derive(Clone, Debug)]
-struct GreedyPathResult {
-    path: Vec<String>,
-    betas: Vec<f64>,
-    total_beta: f64,
-    length: usize,
 }
 
 /// ClusterWeightedGraph (Rust Computation)
@@ -62,9 +44,6 @@ struct CWGData {
     dorothea_weights: Vec<f64>,
     betas: Vec<f64>,
     
-    // TF-TF Edge for cascade
-    tf_tf_edges: Vec<TFEdge>,
-    tf_graph: HashMap<String, Vec<(String, f64, f64)>>,  // source -> [(target, beta, weight)]
     
     // Expression
     source_expr: HashMap<String, f64>,
@@ -78,7 +57,7 @@ struct CWGData {
 }
 
 // =============================================================
-// Python에 노출되는 CWG 클래스
+// CWG class exposed to Python
 // =============================================================
 
 #[pyclass]
@@ -94,13 +73,12 @@ pub struct ClusterWeightedGraphRust {
     n_genes: usize,
     #[pyo3(get)]
     n_edges: usize,
-    #[pyo3(get)]
-    n_tf_tf_edges: usize,
 }
 
 #[pymethods]
 impl ClusterWeightedGraphRust {
-    /// Python에서 생성자 호출
+    /// Dense constructor exposed to Python.
+	/// OPTIONAL_PUBLIC API: the current server uses new_sparse() instead.
     #[new]
     #[pyo3(signature = (
         expr_matrix,
@@ -140,14 +118,14 @@ impl ClusterWeightedGraphRust {
         let mask = cluster_mask.as_array();
         let d_weights = dorothea_weights.as_array();
         
-        // 유전자 이름 → 인덱스 매핑
+        // Map gene names to indices.
         let gene_to_global_idx: HashMap<String, usize> = gene_names
             .iter()
             .enumerate()
             .map(|(i, g)| (g.clone(), i))
             .collect();
         
-        // 클러스터 세포 인덱스
+        // Cluster cell indices
         let cluster_cells: Vec<usize> = mask
             .iter()
             .enumerate()
@@ -270,11 +248,6 @@ impl ClusterWeightedGraphRust {
         let mut dorothea_w: Vec<f64> = Vec::with_capacity(edges_data.len());
         let mut betas: Vec<f64> = Vec::with_capacity(edges_data.len());
         
-        // TF-TF edges & graph formulation
-        let mut tf_tf_edges: Vec<TFEdge> = Vec::new();
-        let mut tf_graph: HashMap<String, Vec<(String, f64, f64)>> = HashMap::new();
-        let tf_set: HashSet<&String> = expressed_tfs.keys().collect();
-        
         for (src, tgt, d_weight, conf, beta, _) in edges_data {
             let src_local = *gene_to_local_idx.get(&src).unwrap();
             let tgt_local = *gene_to_local_idx.get(&tgt).unwrap();
@@ -291,29 +264,11 @@ impl ClusterWeightedGraphRust {
             edge_tgt_local.push(tgt_local);
             dorothea_w.push(d_weight);
             betas.push(beta);
-            
-            // Verify and store TF-TF edges
-            if tf_set.contains(&tgt) {
-                tf_tf_edges.push(TFEdge {
-                    source: src.clone(),
-                    target: tgt.clone(),
-                    beta,
-                    dorothea_weight: d_weight,
-                });
-                
-                tf_graph
-                    .entry(src.clone())
-                    .or_insert_with(Vec::new)
-                    .push((tgt.clone(), beta, d_weight));
-            }
-        }
-        
-        println!("TF-TF edges: {}", tf_tf_edges.len());
-        
+      
         let pathway_name = format!("adata_{}{}", cluster_key, cluster_id);
         let n_genes = pathway_genes.len();
         let n_edges = edges.len();
-        let n_tf_tf_edges = tf_tf_edges.len();
+
         
         println!("✓ Network built: {}", pathway_name);
         
@@ -328,8 +283,6 @@ impl ClusterWeightedGraphRust {
             edge_tgt_local,
             dorothea_weights: dorothea_w,
             betas,
-            tf_tf_edges,
-            tf_graph,
             source_expr,
             target_expr,
             cluster_cells,
@@ -342,7 +295,6 @@ impl ClusterWeightedGraphRust {
             cluster_id: cluster_id.to_string(),
             n_genes,
             n_edges,
-            n_tf_tf_edges,
         })
     }
     
