@@ -473,11 +473,6 @@ impl ClusterWeightedGraphRust {
         let mut dorothea_w: Vec<f64> = Vec::with_capacity(edges_data.len());
         let mut betas: Vec<f64> = Vec::with_capacity(edges_data.len());
 
-        // TF-TF edges & graph
-        let mut tf_tf_edges: Vec<TFEdge> = Vec::new();
-        let mut tf_graph: HashMap<String, Vec<(String, f64, f64)>> = HashMap::new();
-        let tf_set: HashSet<&String> = expressed_tfs.keys().collect();
-
         for (src, tgt, d_weight, conf, beta, _) in edges_data {
             let src_local = *gene_to_local_idx.get(&src).unwrap();
             let tgt_local = *gene_to_local_idx.get(&tgt).unwrap();
@@ -494,20 +489,6 @@ impl ClusterWeightedGraphRust {
             edge_tgt_local.push(tgt_local);
             dorothea_w.push(d_weight);
             betas.push(beta);
-
-            if tf_set.contains(&tgt) {
-                tf_tf_edges.push(TFEdge {
-                    source: src.clone(),
-                    target: tgt.clone(),
-                    beta,
-                    dorothea_weight: d_weight,
-                });
-
-                tf_graph
-                    .entry(src.clone())
-                    .or_insert_with(Vec::new)
-                    .push((tgt.clone(), beta, d_weight));
-            }
         }
 
         println!("TF-TF edges: {}", tf_tf_edges.len());
@@ -561,8 +542,7 @@ impl ClusterWeightedGraphRust {
             .iter()
             .map(|&global_idx| expr[[cell_idx, global_idx]])
             .collect();
-
-        // [수정] 전체 유전자 발현 총합
+		
         let total_alpha_g: f64 = expr.row(cell_idx).iter().sum();
 
         let norm = compute_single_norm_internal(
@@ -577,7 +557,8 @@ impl ClusterWeightedGraphRust {
         Ok(norm)
     }
     
-    /// G2 norm calculation (parallel)
+    /// Calculate per-cell edge-L2 values from a dense matrix in parallel.
+	/// OPTIONAL PUBLIC API: not called by the current server.
     fn compute_all_norms(
         &self,
         py: Python<'_>,
@@ -601,7 +582,7 @@ impl ClusterWeightedGraphRust {
                         .map(|&global_idx| expr[[cell_idx, global_idx]])
                         .collect();
 
-                    // [수정] 전체 유전자 발현 총합
+
                     let total_alpha_g: f64 = expr.row(cell_idx).iter().sum();
 
                     compute_single_norm_internal(
@@ -618,8 +599,8 @@ impl ClusterWeightedGraphRust {
         
         Ok(PyArray1::from_vec_bound(py, norms).into())
     }
-
-    /// G2 norm calculation (parallel, sparse)
+	/// Calculate per-cell edge-L2 values from a sparse matrix in parallel.
+    /// OPTIONAL PUBLIC API: not called by the current server.
     fn compute_all_norms_sparse(
         &self,
         py: Python<'_>,
@@ -646,7 +627,6 @@ impl ClusterWeightedGraphRust {
                 .map(|cell_idx| {
                     let mut alpha = vec![0.0f64; n_local];
                     let row = csr.row(cell_idx);
-                    // [수정] sparse row 전체 합 = 전체 유전자 발현 총합
                     let total_alpha_g: f64 = row.values().iter().sum();
                     for (&col, &val) in row.col_indices().iter().zip(row.values().iter()) {
                         if let Some(&local) = global_to_local.get(&col) {
@@ -663,8 +643,8 @@ impl ClusterWeightedGraphRust {
 
         Ok(PyArray1::from_vec_bound(py, norms).into())
     }
-
-    /// G2 norm calculation for specific cell cluster activity
+	/// Calculate dense-matrix edge-L2 values for stored cluster cells.
+    /// OPTIONAL PUBLIC API: not called by the current server.
     fn compute_cluster_norms(
         &self,
         py: Python<'_>,
@@ -688,7 +668,7 @@ impl ClusterWeightedGraphRust {
                         .map(|&global_idx| expr[[cell_idx, global_idx]])
                         .collect();
 
-                    // [수정] 전체 유전자 발현 총합
+
                     let total_alpha_g: f64 = expr.row(cell_idx).iter().sum();
 
                     compute_single_norm_internal(
@@ -705,8 +685,8 @@ impl ClusterWeightedGraphRust {
         
         Ok(PyArray1::from_vec_bound(py, norms).into())
     }
-    
-    /// G2 norm for cluster cells only (sparse)
+    /// Calculate sparse-matrix edge-L2 values for stored cluster cells.
+    /// OPTIONAL PUBLIC API: not called by the current server.
     fn compute_cluster_norms_sparse(
         &self,
         py: Python<'_>,
@@ -733,7 +713,7 @@ impl ClusterWeightedGraphRust {
                 .map(|&cell_idx| {
                     let mut alpha = vec![0.0f64; n_local];
                     let row = csr.row(cell_idx);
-                    // [수정] sparse row 전체 합 = 전체 유전자 발현 총합
+                    // Corrected: the full sparse-row sum equals total expression across all genes.
                     let total_alpha_g: f64 = row.values().iter().sum();
                     for (&col, &val) in row.col_indices().iter().zip(row.values().iter()) {
                         if let Some(&local) = global_to_local.get(&col) {
@@ -752,146 +732,11 @@ impl ClusterWeightedGraphRust {
     }
 
     /// Return cluster cell indices
+	/// OPTIONAL PUBLIC API: not called by the current server.
     fn get_cluster_cells(&self, _py: Python<'_>) -> PyResult<Vec<usize>> {
         Ok(self.data.cluster_cells.clone())
     }
-    
-    /// Finding Greedy Max-Beta Path
-    #[pyo3(signature = (beta_threshold = 0.5, max_length = 50, top_n_starts = 1))]
-    fn find_greedy_max_beta_path(
-        &self,
-        py: Python<'_>,
-        beta_threshold: f64,
-        max_length: usize,
-        top_n_starts: usize,
-    ) -> PyResult<PyObject> {
-        let result_dict = PyDict::new_bound(py);
-        
-        if self.data.tf_tf_edges.is_empty() {
-            result_dict.set_item("path", Vec::<String>::new())?;
-            result_dict.set_item("betas", Vec::<f64>::new())?;
-            result_dict.set_item("total_beta", 0.0)?;
-            result_dict.set_item("length", 0)?;
-            result_dict.set_item("all_paths", Vec::<PyObject>::new())?;
-            return Ok(result_dict.into());
-        }
-        
-        // Beta-sorted starting edges
-        let mut sorted_edges = self.data.tf_tf_edges.clone();
-        sorted_edges.sort_by(|a, b| b.beta.partial_cmp(&a.beta).unwrap());
-        
-        let mut all_paths: Vec<GreedyPathResult> = Vec::new();
-        let mut used_starts: HashSet<String> = HashSet::new();
-        
-        for edge in sorted_edges.iter().take(top_n_starts * 3) {
-            if used_starts.contains(&edge.source) {
-                continue;
-            }
-            if all_paths.len() >= top_n_starts {
-                break;
-            }
-            
-            used_starts.insert(edge.source.clone());
-            
-            let path_result = self.find_single_greedy_path(
-                &edge.source,
-                beta_threshold,
-                max_length,
-            );
-            
-            if path_result.length >= 2 {
-                all_paths.push(path_result);
-            }
-        }
-        
-        // Best path
-        let best_path = all_paths.iter()
-            .max_by(|a, b| a.total_beta.partial_cmp(&b.total_beta).unwrap())
-            .cloned()
-            .unwrap_or(GreedyPathResult {
-                path: Vec::new(),
-                betas: Vec::new(),
-                total_beta: 0.0,
-                length: 0,
-            });
-        
-        result_dict.set_item("path", best_path.path)?;
-        result_dict.set_item("betas", best_path.betas)?;
-        result_dict.set_item("total_beta", best_path.total_beta)?;
-        result_dict.set_item("length", best_path.length)?;
-        
-        // Converse all_paths to PyObject list
-        let all_paths_py: Vec<PyObject> = all_paths.iter().map(|p| {
-            let d = PyDict::new_bound(py);
-            d.set_item("path", p.path.clone()).unwrap();
-            d.set_item("betas", p.betas.clone()).unwrap();
-            d.set_item("total_beta", p.total_beta).unwrap();
-            d.set_item("length", p.length).unwrap();
-            d.into()
-        }).collect();
-        
-        result_dict.set_item("all_paths", all_paths_py)?;
-        
-        Ok(result_dict.into())
-    }
-    /// Finding Greedy Paths starting from all TFs.
-
-    #[pyo3(signature = (beta_threshold = 0.5, min_path_length = 3, max_length = 50))]
-    fn find_all_greedy_paths(
-        &self,
-        py: Python<'_>,
-        beta_threshold: f64,
-        min_path_length: usize,
-        max_length: usize,
-    ) -> PyResult<PyObject> {
-        let result_dict = PyDict::new_bound(py);
-        
-        let mut all_paths: Vec<GreedyPathResult> = Vec::new();
-        
-        // Starting from all TFs.
-        for tf in self.data.source_expr.keys() {
-            if self.data.tf_graph.contains_key(tf) {
-                let path_result = self.find_single_greedy_path(
-                    tf,
-                    beta_threshold,
-                    max_length,
-                );
-                
-                if path_result.length >= min_path_length {
-                    all_paths.push(path_result);
-                }
-            }
-        }
-        
-        // total_beta order
-        all_paths.sort_by(|a, b| b.total_beta.partial_cmp(&a.total_beta).unwrap());
-        
-        // DataFrame Conversion
-        let mut start_tfs: Vec<String> = Vec::new();
-        let mut paths: Vec<String> = Vec::new();
-        let mut lengths: Vec<usize> = Vec::new();
-        let mut total_betas: Vec<f64> = Vec::new();
-        let mut avg_betas: Vec<f64> = Vec::new();
-        
-        for p in &all_paths {
-            start_tfs.push(p.path.first().cloned().unwrap_or_default());
-            paths.push(p.path.join(" -> "));
-            lengths.push(p.length);
-            total_betas.push(p.total_beta);
-            avg_betas.push(if p.betas.is_empty() { 0.0 } else { 
-                p.total_beta / p.betas.len() as f64 
-            });
-        }
-        
-        result_dict.set_item("start_tf", start_tfs)?;
-        result_dict.set_item("path", paths)?;
-        result_dict.set_item("length", lengths)?;
-        result_dict.set_item("total_beta", total_betas)?;
-        result_dict.set_item("avg_beta", avg_betas)?;
-        
-        Ok(result_dict.into())
-    }
-    
+ 
     /// Return Pathway genes
     fn get_pathway_genes(&self, _py: Python<'_>) -> PyResult<Vec<String>> {
         Ok(self.data.pathway_genes.clone())
@@ -953,100 +798,13 @@ impl ClusterWeightedGraphRust {
         Ok(dict.into())
     }
     
-    /// Extract only TF-TF edges
-    fn get_tf_tf_edges(&self, py: Python<'_>) -> PyResult<PyObject> {
-        let dict = PyDict::new_bound(py);
-        
-        let sources: Vec<String> = self.data.tf_tf_edges
-            .iter()
-            .map(|e| e.source.clone())
-            .collect();
-        
-        let targets: Vec<String> = self.data.tf_tf_edges
-            .iter()
-            .map(|e| e.target.clone())
-            .collect();
-        
-        let dorothea_w: Vec<f64> = self.data.tf_tf_edges
-            .iter()
-            .map(|e| e.dorothea_weight)
-            .collect();
-        
-        let betas: Vec<f64> = self.data.tf_tf_edges
-            .iter()
-            .map(|e| e.beta)
-            .collect();
-        
-        dict.set_item("source", sources)?;
-        dict.set_item("target", targets)?;
-        dict.set_item("dorothea_weight", dorothea_w)?;
-        dict.set_item("beta", betas)?;
-        
-        Ok(dict.into())
-    }
+
     
     fn __repr__(&self) -> String {
         format!(
-            "ClusterWeightedGraphRust('{}', genes={}, edges={}, tf_tf_edges={})",
-            self.pathway_name, self.n_genes, self.n_edges, self.n_tf_tf_edges
+            "ClusterWeightedGraphRust('{}', genes={}, edges={})",
+            self.pathway_name, self.n_genes, self.n_edges
         )
-    }
-}
-
-// =============================================================
-// 내부 메서드 (Python에 노출 안됨)
-// =============================================================
-
-impl ClusterWeightedGraphRust {
-    /// 단일 시작점에서 Greedy Path 찾기
-    fn find_single_greedy_path(
-        &self,
-        start_tf: &str,
-        beta_threshold: f64,
-        max_length: usize,
-    ) -> GreedyPathResult {
-        let mut path: Vec<String> = vec![start_tf.to_string()];
-        let mut betas: Vec<f64> = Vec::new();
-        let mut visited: HashSet<String> = HashSet::new();
-        visited.insert(start_tf.to_string());
-        
-        let mut current = start_tf.to_string();
-        
-        while path.len() < max_length {
-            // 현재 노드에서 나가는 edges
-            let next_edges = match self.data.tf_graph.get(&current) {
-                Some(edges) => edges,
-                None => break,
-            };
-            
-            // 방문하지 않은 것 중 최대 beta 선택
-            let best_next = next_edges
-                .iter()
-                .filter(|(tgt, beta, _)| {
-                    !visited.contains(tgt) && *beta >= beta_threshold
-                })
-                .max_by(|a, b| a.1.partial_cmp(&b.1).unwrap());
-            
-            match best_next {
-                Some((next_tf, beta, _)) => {
-                    path.push(next_tf.clone());
-                    betas.push(*beta);
-                    visited.insert(next_tf.clone());
-                    current = next_tf.clone();
-                }
-                None => break,
-            }
-        }
-        
-        let total_beta: f64 = betas.iter().sum();
-        let length = path.len();
-        
-        GreedyPathResult {
-            path,
-            betas,
-            total_beta,
-            length,
-        }
     }
 }
 
@@ -1123,7 +881,6 @@ fn compute_all_cwg_norms(
                         .map(|&global_idx| expr[[cell_idx, global_idx]])
                         .collect();
 
-                    // [수정] 전체 유전자 발현 총합
                     let total_alpha_g: f64 = expr.row(cell_idx).iter().sum();
 
                     compute_single_norm_internal(
