@@ -807,9 +807,10 @@ impl ClusterWeightedGraphRust {
         )
     }
 }
-
+	
 // =============================================================
-// 내부 계산 함수
+// Shared edge-L2 calculation used by optional dense and sparse CWG norm APIs.
+// This is distinct from build_conservative_graph(), which aggregates path means.
 // =============================================================
 
 #[inline]
@@ -819,7 +820,7 @@ fn compute_single_norm_internal(
     edge_tgt: &[usize],
     edge_dorothea_weights: &[f64],
     beta_mode_dynamic: bool,
-    total_alpha_g: f64,  // 전체 유전자 발현 총합 (pathway 한정 X)
+    total_alpha_g: f64, // Total expression across all genes, not restricted to the pathway.
 ) -> f64 {
     let alpha_g = total_alpha_g;
 
@@ -850,7 +851,8 @@ fn compute_single_norm_internal(
 }
 
 // =============================================================
-// 배치 처리 함수
+// Optional batch CWG APIs retained for wrapper.py compatibility.
+// These functions are exported through PyO3 but are not called by the current server.
 // =============================================================
 
 #[pyfunction]
@@ -901,7 +903,7 @@ fn compute_all_cwg_norms(
     Ok(result_dict.into())
 }
 
-/// 클러스터 세포만의 norm 배치 계산
+/// Batch norm calculation for cluster cells only
 #[pyfunction]
 fn compute_cluster_cwg_norms(
     py: Python<'_>,
@@ -936,7 +938,7 @@ fn compute_cluster_cwg_norms(
 }
 
 // =============================================================
-// 배치 처리 함수 (sparse)
+// Sparse batch processing functions
 // =============================================================
 
 #[pyfunction]
@@ -991,7 +993,7 @@ fn compute_all_cwg_norms_sparse(
     Ok(result_dict.into())
 }
 
-/// 클러스터 세포만의 norm 배치 계산 (sparse)
+/// Sparse batch norm calculation for cluster cells only
 #[pyfunction]
 fn compute_cluster_cwg_norms_sparse(
     py: Python<'_>,
@@ -1020,7 +1022,7 @@ fn compute_cluster_cwg_norms_sparse(
             cluster_cells.par_iter().map(|&cell_idx| {
                 let mut alpha = vec![0.0f64; n_local];
                 let row = csr.row(cell_idx);
-                // [수정] sparse row 전체 합 = 전체 유전자 발현 총합
+                // Corrected: the full sparse-row sum equals total expression across all genes.
                 let total_alpha_g: f64 = row.values().iter().sum();
                 for (&col, &val) in row.col_indices().iter().zip(row.values().iter()) {
                     if let Some(&local) = global_to_local.get(&col) {
@@ -1036,6 +1038,22 @@ fn compute_cluster_cwg_norms_sparse(
     }
     Ok(result_dict.into())
 }
+/// Aggregate prior TF-target edges over path-mean expression profiles.
+/// CURRENT SERVER PATH: graph_utils.py calls this.
+/// beta_threshold filters support within each path and threshold specifies the
+/// minimum fraction of input paths that must support an edge.
+///
+/// In all-edge mode, for path Γ and edge (i,j):
+///   beta_ij(Γ) = sqrt(abs(alpha_i(Γ) + alpha_j(Γ) + prior_weight_ij))
+///   contribution_ij(Γ) = alpha_i(Γ) * alpha_j(Γ) * beta_ij(Γ)^2
+///                        / alpha_G(Γ)^2
+/// where alpha values are means over cells visited by Γ and alpha_G is the
+/// corresponding mean total expression across all genes. Each edge can add at
+/// most one support count per input path in this mode.
+///
+/// Rust returns count, freq, mean_beta, mean_contribution and mean alpha values.
+/// graph_utils.py subsequently computes score = freq * mean_beta and performs
+/// score-based ranking.
 #[pyfunction]
 #[pyo3(signature = (
     cwg,
@@ -1052,14 +1070,11 @@ fn build_conservative_graph(
     mut cwg: PyRefMut<'_, ClusterWeightedGraphRust>,
     reduced_paths: Vec<Vec<usize>>,
     sparse_matrix: &Bound<'_, PyAny>,
-    use_greedy: bool,
     beta_threshold: f64,
-    min_path_length: usize,
-    max_length: usize,
     threshold: f64,
 ) -> PyResult<PyObject> {
 
-    // ── CSR 변환: 여기서 딱 1회 ─────────────────────────────────
+    // ── Convert to CSR exactly once here ───────────────────────
     let csr = csr_to_rust(sparse_matrix)?;
 
     let total = reduced_paths.len();
@@ -1077,8 +1092,8 @@ fn build_conservative_graph(
         }
         let n = n_cells as f64;
 
-        // ── 1. col_sums: path 세포들의 gene별 발현 합산 ──────────
-        // &csr 참조만, 복사 없음
+        // ── 1. col_sums: sum expression by gene across path cells ─
+        // Borrow &csr without copying.
         let mut col_sums: HashMap<usize, f64> = HashMap::new();
         for &cell_idx in path {
             let row = csr.row(cell_idx);
