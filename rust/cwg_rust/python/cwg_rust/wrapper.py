@@ -45,17 +45,17 @@ class ClusterWeightedGraph:
         beta_mode: str = 'dynamic',
     ):
         """
-        ClusterWeightedGraph 생성
+        Construct a ClusterWeightedGraph.
         
         Args:
-            adata: AnnData 객체
+            adata: AnnData object.
             dorothea_df: DoRothEA DataFrame
-            cluster_id: 클러스터 ID
-            cluster_key: 클러스터 컬럼명
+            cluster_id: Cluster identifier.
+            cluster_key: Column in ``adata.obs`` containing cluster labels.
             confidence_levels: DoRothEA confidence levels
-            tf_expr_threshold: TF 최소 발현량
-            target_expr_threshold: Target 최소 발현량
-            require_both_expressed: 둘 다 발현된 edge만
+            tf_expr_threshold: Minimum TF expression.
+            target_expr_threshold: Minimum target expression.
+            require_both_expressed: Retain only edges with both genes expressed.
             beta_mode: 'dynamic' or 'static'
         """
         if not RUST_AVAILABLE:
@@ -70,7 +70,7 @@ class ClusterWeightedGraph:
         self.beta_mode = beta_mode
         self.pathway_name = f"adata_{cluster_key}{cluster_id}"
         
-        # Expression matrix 준비
+        # Prepare the expression matrix
         if issparse(adata.X):
             self._expr_matrix = np.ascontiguousarray(
                 adata.X.toarray(), dtype=np.float64
@@ -80,18 +80,18 @@ class ClusterWeightedGraph:
                 adata.X, dtype=np.float64
             )
         
-        # 유전자 이름 리스트
+        # Preserve the AnnData gene order used by the expression matrix.
         self._gene_names = list(adata.var_names)
         
-        # 클러스터 마스크
+        # Build the cluster mask.
         cluster_mask = (
             adata.obs[cluster_key].astype(str) == self.cluster_id
         ).values
         
-        # DoRothEA 컬럼 감지 및 데이터 준비
+        # Normalize DoRothEA columns and apply confidence filtering
         df = self._prepare_dorothea(dorothea_df, confidence_levels)
         
-        # Rust CWG 생성
+        # Construct the Rust graph object.
         self._rust_cwg = ClusterWeightedGraphRust(
             expr_matrix=self._expr_matrix,
             gene_names=self._gene_names,
@@ -111,16 +111,16 @@ class ClusterWeightedGraph:
             beta_mode=beta_mode,
         )
         
-        # Python 속성 동기화
+        # Expose selected Rust properties through the Python wrapper.
         self.pathway_genes = self._rust_cwg.get_pathway_genes()
         self.n_genes = self._rust_cwg.n_genes
         self.n_edges = self._rust_cwg.n_edges
         self.n_tf_tf_edges = self._rust_cwg.n_tf_tf_edges
         
-        # 클러스터 세포 인덱스
+        # Retain the indices of cells included in the cluster.
         self._cluster_cells = self._rust_cwg.get_cluster_cells()
         
-        # Edge 데이터 캐싱
+        # Cache edge-level values used by convience methods.
         self._cache_edge_data()
     
     def _prepare_dorothea(
@@ -128,10 +128,10 @@ class ClusterWeightedGraph:
         df: pd.DataFrame, 
         confidence_levels: List[str]
     ) -> pd.DataFrame:
-        """DoRothEA DataFrame 준비 및 정규화"""
+        """Normalize a DoRothEA table for the Rust constructor."""
         df = df.copy()
         
-        # 컬럼명 정규화
+        # Normalize supported column aliases.
         col_map = {}
         for col in df.columns:
             col_lower = col.lower()
@@ -146,19 +146,18 @@ class ClusterWeightedGraph:
         
         df = df.rename(columns=col_map)
         
-        # 필수 컬럼 확인
         if 'weight' not in df.columns:
             df['weight'] = 1.0
         if 'confidence' not in df.columns:
             df['confidence'] = 'A'
         
-        # Confidence 필터링 (Python에서 먼저)
+        # Filtering confidence levels.
         df = df[df['confidence'].isin(confidence_levels)]
         
         return df
     
     def _cache_edge_data(self):
-        """Edge 데이터 캐싱"""
+        """Cache edge values and source/target expression summaries"""
         edges_data = self._rust_cwg.get_edges_data()
         
         self.edge_weights = {}
@@ -177,12 +176,12 @@ class ClusterWeightedGraph:
     # =========================================================
     
     def compute_graph_norm(self, cell_id: str) -> float:
-        """단일 세포의 G2 norm 계산"""
+        """Calculate the graph norm for one cell."""
         cell_idx = self.adata.obs.index.get_loc(cell_id)
         return self._rust_cwg.compute_graph_norm(self._expr_matrix, cell_idx)
     
     def compute_all_norms(self, add_to_obs: bool = True) -> np.ndarray:
-        """모든 세포의 G2 norm 계산 (병렬)"""
+        """Calculate graph norms for all cells in parallel."""
         norms = np.array(self._rust_cwg.compute_all_norms(self._expr_matrix))
         
         if add_to_obs:
@@ -197,15 +196,15 @@ class ClusterWeightedGraph:
         return_with_indices: bool = False
     ) -> Union[np.ndarray, Tuple[np.ndarray, List[int]]]:
         """
-        클러스터 세포들만의 G2 norm 계산 (클러스터 activity)
+        Calculate graph norms for cells in the selected cluster.
         
         Args:
-            add_to_obs: adata.obs에 추가할지
-            return_with_indices: 세포 인덱스와 함께 반환할지
+            add_to_obs: Add the result to ``adata.obs``.
+            return_with_indices: Return the corresponding cell indices.
             
         Returns:
-            norms: 클러스터 세포들의 G2 norm 배열
-            (optional) indices: 클러스터 세포 인덱스
+            norms: Graph norms for cluster cells.
+            indices: Cluster-cell indices when requested.
         """
         norms = np.array(
             self._rust_cwg.compute_cluster_norms(self._expr_matrix)
@@ -213,7 +212,7 @@ class ClusterWeightedGraph:
         
         if add_to_obs:
             col_name = f"{self.pathway_name}_cluster_G2"
-            # 클러스터 세포만 값 할당
+            # Assign norms to cluster cells and leave all other cells as NaN.
             full_norms = np.full(len(self.adata), np.nan)
             full_norms[self._cluster_cells] = norms
             self.adata.obs[col_name] = full_norms
@@ -223,7 +222,7 @@ class ClusterWeightedGraph:
         return norms
     
     def get_cluster_activity_summary(self) -> Dict:
-        """클러스터 activity 요약 통계"""
+        """Summarize graph activity within the selected cluster"""
         norms = self.compute_cluster_norms(add_to_obs=False)
         
         return {
@@ -236,83 +235,18 @@ class ClusterWeightedGraph:
             'max_norm': float(np.max(norms)),
             'n_genes': self.n_genes,
             'n_edges': self.n_edges,
-            'n_tf_tf_edges': self.n_tf_tf_edges,
+
         }
-    
+
     # =========================================================
-    # Greedy Max-Beta Path
+    # Edge and expression sumaries
     # =========================================================
-    
-    def find_greedy_max_beta_path(
-        self,
-        beta_threshold: float = 0.5,
-        max_length: int = 50,
-        top_n_starts: int = 1,
-    ) -> Dict:
-        """
-        가장 activity가 큰 TF-TF edge에서 시작하여
-        최대 beta 방향으로 이어지는 경로 탐색
-        
-        Args:
-            beta_threshold: 최소 beta 임계값 (이하면 멈춤)
-            max_length: 최대 경로 길이
-            top_n_starts: 시작점 후보 수
-            
-        Returns:
-            {
-                'path': ['TF1', 'TF2', 'TF3', ...],
-                'betas': [1.5, 1.2, 0.9, ...],
-                'total_beta': 3.6,
-                'length': 4,
-                'all_paths': [...],
-            }
-        """
-        result = self._rust_cwg.find_greedy_max_beta_path(
-            beta_threshold, max_length, top_n_starts
-        )
-        return dict(result)
-    
-    def find_all_greedy_paths(
-        self,
-        beta_threshold: float = 0.5,
-        min_path_length: int = 3,
-        max_length: int = 50,
-    ) -> pd.DataFrame:
-        """
-        모든 TF에서 시작하는 Greedy Path 탐색
-        
-        Args:
-            beta_threshold: 최소 beta 임계값
-            min_path_length: 최소 경로 길이
-            max_length: 최대 경로 길이
-            
-        Returns:
-            DataFrame with columns:
-            - start_tf: 시작 TF
-            - path: 경로 문자열 (TF1 -> TF2 -> ...)
-            - length: 경로 길이
-            - total_beta: 총 beta 합
-            - avg_beta: 평균 beta
-        """
-        result = self._rust_cwg.find_all_greedy_paths(
-            beta_threshold, min_path_length, max_length
-        )
-        return pd.DataFrame(result)
-    
-    # =========================================================
-    # Edge 및 그래프 정보
-    # =========================================================
-    
     def get_edges_df(self) -> pd.DataFrame:
-        """모든 edge 정보를 DataFrame으로"""
+        """Return all retained edges as a DataFrame."""
         return pd.DataFrame(self._rust_cwg.get_edges_data())
     
-    def get_tf_tf_edges_df(self) -> pd.DataFrame:
-        """TF-TF edge만 DataFrame으로"""
-        return pd.DataFrame(self._rust_cwg.get_tf_tf_edges())
-    
     def get_expression_summary(self) -> pd.DataFrame:
-        """Edge별 발현량 요약"""
+        """Return source and target expression for each retained edge."""
         edges_data = self._rust_cwg.get_edges_data()
         
         records = []
@@ -334,13 +268,13 @@ class ClusterWeightedGraph:
     def __repr__(self):
         return (
             f"ClusterWeightedGraph('{self.pathway_name}', "
-            f"genes={self.n_genes}, edges={self.n_edges}, "
-            f"tf_tf_edges={self.n_tf_tf_edges})"
+            f"genes={self.n_genes}, edges={self.n_edges})"
         )
 
 
+
 # =============================================================
-# 배치 처리 함수들
+# Batch helpers
 # =============================================================
 
 def build_all_cluster_graphs(
@@ -356,19 +290,19 @@ def build_all_cluster_graphs(
     verbose: bool = True,
 ) -> Dict[str, ClusterWeightedGraph]:
     """
-    모든/특정 클러스터에 대해 ClusterWeightedGraph 생성
+    Build a ClusterWeightedGraph for every selected cluster.
     
     Args:
-        adata: AnnData 객체
+        adata: AnnData object.
         dorothea_df: DoRothEA DataFrame
-        cluster_key: 클러스터 컬럼명
-        cluster_ids: 특정 클러스터만 (None이면 전체)
+        cluster_key: Column in ``adata.obs`` containing cluster labels.
+        cluster_ids: Optional subset of cluster identifiers.
         confidence_levels: DoRothEA confidence levels
-        tf_expr_threshold: TF 최소 발현량
-        target_expr_threshold: Target 최소 발현량
-        require_both_expressed: 둘 다 발현 필수
+        tf_expr_threshold: Minimum TF expression.
+        target_expr_threshold: Minimum target expression.
+        require_both_expressed: Require both genes to be expressed.
         beta_mode: 'dynamic' or 'static'
-        verbose: 진행상황 출력
+        verbose: Print progress information.
         
     Returns:
         {pathway_name: ClusterWeightedGraph}
@@ -422,13 +356,13 @@ def compute_all_cluster_norms(
     verbose: bool = True,
 ) -> pd.DataFrame:
     """
-    모든 CWG에 대해 전체 세포의 G2 norm 계산
+    Calculate graph norms for every cell and graph.
     
     Args:
-        adata: AnnData 객체
-        cwg_dict: CWG 딕셔너리
-        add_to_obs: adata.obs에 추가
-        verbose: 진행상황 출력
+        adata: AnnData object.
+        cwg_dict: Mapping of graph names to wrappers.
+        add_to_obs: Add each result to ``adata.obs``.
+        verbose: Print progress information.
         
     Returns:
         DataFrame (rows=cells, cols=graph norms)
@@ -442,7 +376,7 @@ def compute_all_cluster_norms(
         print(f"Total cells: {len(adata)}")
         print(f"Total graphs: {len(cwg_dict)}")
     
-    # Expression matrix 준비
+    # Prepare the expression matrix.
     if issparse(adata.X):
         expr_matrix = np.ascontiguousarray(
             adata.X.toarray(), dtype=np.float64
@@ -450,13 +384,13 @@ def compute_all_cluster_norms(
     else:
         expr_matrix = np.ascontiguousarray(adata.X, dtype=np.float64)
     
-    # Rust CWG 리스트
+    # Collect the Rust graph objects.
     rust_cwg_list = [cwg._rust_cwg for cwg in cwg_dict.values()]
     
-    # 배치 계산
+    # Calculate all norms in one batch.
     results = compute_all_cwg_norms(expr_matrix, rust_cwg_list)
     
-    # 결과 저장
+    # Store results by graph name.
     norm_data = {}
     for col_name, norms in results.items():
         norms = np.array(norms)
@@ -483,13 +417,12 @@ def compute_cluster_activity_norms(
     verbose: bool = True,
 ) -> pd.DataFrame:
     """
-    각 CWG에 대해 해당 클러스터 세포들만의 G2 norm 계산
-    (클러스터 activity 측정)
+    Calculate graph activity over the cells assigned to each graph's cluster.
     
     Args:
-        adata: AnnData 객체
-        cwg_dict: CWG 딕셔너리
-        verbose: 진행상황 출력
+        adata: AnnData object.
+        cwg_dict: Mapping of graph names to wrappers.
+        verbose: Print progress information.
         
     Returns:
         DataFrame (rows=graphs, cols=activity metrics)
@@ -524,131 +457,7 @@ def compute_cluster_activity_norms(
     return df
 
 
-def find_top_greedy_paths(
-    cwg_dict: Dict[str, ClusterWeightedGraph],
-    beta_threshold: float = 0.5,
-    min_path_length: int = 3,
-    top_n_per_cluster: int = 5,
-    verbose: bool = True,
-) -> pd.DataFrame:
-    """
-    모든 클러스터에서 상위 Greedy Path 탐색
-    
-    Args:
-        cwg_dict: CWG 딕셔너리
-        beta_threshold: 최소 beta 임계값
-        min_path_length: 최소 경로 길이
-        top_n_per_cluster: 클러스터당 상위 N개
-        verbose: 진행상황 출력
-        
-    Returns:
-        DataFrame with top paths across all clusters
-    """
-    if verbose:
-        print(f"\n{'='*60}")
-        print(f"Finding Top Greedy Paths")
-        print(f"{'='*60}")
-    
-    all_paths = []
-    
-    for pathway_name, cwg in cwg_dict.items():
-        paths_df = cwg.find_all_greedy_paths(
-            beta_threshold=beta_threshold,
-            min_path_length=min_path_length,
-        )
-        
-        if len(paths_df) > 0:
-            paths_df['cluster'] = pathway_name
-            top_paths = paths_df.head(top_n_per_cluster)
-            all_paths.append(top_paths)
-            
-            if verbose:
-                print(f"  {pathway_name}: {len(paths_df)} paths found")
-    
-    if all_paths:
-        result_df = pd.concat(all_paths, ignore_index=True)
-        result_df = result_df.sort_values('total_beta', ascending=False)
-        return result_df
-    
-    return pd.DataFrame()
-
-
-# =============================================================
-# 시각화 함수
-# =============================================================
-
-def visualize_greedy_path(
-    cwg: ClusterWeightedGraph,
-    path_info: Optional[Dict] = None,
-    beta_threshold: float = 0.5,
-    figsize: Tuple[int, int] = (14, 6),
-):
-    """
-    Greedy Path 시각화
-    
-    Args:
-        cwg: ClusterWeightedGraph
-        path_info: find_greedy_max_beta_path 결과 (없으면 자동 계산)
-        beta_threshold: beta 임계값
-        figsize: 그림 크기
-    """
-    import matplotlib.pyplot as plt
-    
-    if path_info is None:
-        path_info = cwg.find_greedy_max_beta_path(
-            beta_threshold=beta_threshold
-        )
-    
-    path = path_info['path']
-    betas = path_info['betas']
-    
-    if len(path) < 2:
-        print("Path too short to visualize")
-        return
-    
-    fig, ax = plt.subplots(figsize=figsize)
-    
-    # 노드 위치 (선형 배치)
-    x_pos = list(range(len(path)))
-    y_pos = [0] * len(path)
-    
-    # Edge 그리기
-    for i in range(len(betas)):
-        x = [x_pos[i], x_pos[i+1]]
-        y = [0, 0]
-        width = betas[i] * 2
-        ax.plot(x, y, 'b-', linewidth=width, alpha=0.6)
-        
-        # Beta 값 표시
-        mid_x = (x_pos[i] + x_pos[i+1]) / 2
-        ax.text(mid_x, 0.15, f'{betas[i]:.2f}', ha='center', fontsize=9)
-    
-    # 노드 그리기
-    ax.scatter(x_pos, y_pos, s=500, c='lightblue', edgecolors='black', zorder=5)
-    
-    # 노드 라벨
-    for i, tf in enumerate(path):
-        ax.text(x_pos[i], 0, tf, ha='center', va='center', fontsize=8, fontweight='bold')
-    
-    # 임계값 표시
-    ax.axhline(y=-0.3, color='red', linestyle='--', alpha=0.5)
-    ax.text(0, -0.35, f'β threshold: {beta_threshold}', color='red', fontsize=9)
-    
-    ax.set_xlim(-0.5, len(path) - 0.5)
-    ax.set_ylim(-0.5, 0.5)
-    ax.set_title(
-        f"{cwg.pathway_name}: Greedy Max-Beta Path\n"
-        f"Total β = {path_info['total_beta']:.2f}, Length = {path_info['length']}"
-    )
-    ax.axis('off')
-    
-    plt.tight_layout()
-    return fig, ax
-
-
-# =============================================================
-# 예시 사용법
-# =============================================================
+# Usage example
 
 if __name__ == "__main__":
     print("""
@@ -661,10 +470,9 @@ if __name__ == "__main__":
         build_all_cluster_graphs,
         compute_all_cluster_norms,
         compute_cluster_activity_norms,
-        find_top_greedy_paths,
     )
     
-    # 1. 단일 CWG 생성
+    # 1. Build one graph.
     cwg = ClusterWeightedGraph(
         adata=adata,
         dorothea_df=dorothea,
@@ -674,34 +482,24 @@ if __name__ == "__main__":
     )
     print(cwg)
     
-    # 2. 모든 세포 norm 계산
+    # 2. Calculate norms for all cells.
     norms = cwg.compute_all_norms(add_to_obs=True)
     
-    # 3. 클러스터 세포만 norm 계산 (activity)
+    # 3. Calculate activity only over cells in the selected cluster.
     cluster_norms = cwg.compute_cluster_norms()
     summary = cwg.get_cluster_activity_summary()
     
-    # 4. Greedy Max-Beta Path 탐색
-    path_info = cwg.find_greedy_max_beta_path(
-        beta_threshold=0.5,
-        max_length=20,
-    )
-    print(f"Best path: {' -> '.join(path_info['path'])}")
-    print(f"Total beta: {path_info['total_beta']:.2f}")
-    
-    # 5. 모든 클러스터 CWG 생성
+    # 4. Build graphs for all clusters.
     cwg_dict = build_all_cluster_graphs(
         adata=adata,
         dorothea_df=dorothea,
         cluster_key='leiden',
     )
     
-    # 6. 배치 norm 계산
+    # 5. Calculate all graph norms in one batch.
     norm_df = compute_all_cluster_norms(adata, cwg_dict)
     
-    # 7. 클러스터 activity 비교
+    # 6. Compare cluster activity.
     activity_df = compute_cluster_activity_norms(adata, cwg_dict)
     
-    # 8. 전체 Top Greedy Paths
-    paths_df = find_top_greedy_paths(cwg_dict, beta_threshold=0.5)
     """)
