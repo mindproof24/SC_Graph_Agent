@@ -1,14 +1,14 @@
 """
 graph_utils.py
 =================
-MCP 서버와 독립적인 순수 계산 유틸리티 모음.
+Numerical graph-analysis utilities independent of the server interface.
 
-포함:
+Includes:
   A. A* / PhateGenePathFinder  (leiden_astar_pipeline)
-  B. path 처리               (path_filter_process_)
+  B. Path processing           (path_filter_process_)
   C. CWG + conservative graph (build_cluster_conservative_graphs)
   D. LIANA R-L map           (build_rl_gene_map)
-  E. KEGG pathway 파싱/선택  (parse_all_kegg_xmls,
+  E. KEGG pathway parsing     (parse_all_kegg_xmls,
                               compute_and_select_top_kegg,
                               get_top_edges_per_pathway)
 """
@@ -30,9 +30,7 @@ import scipy.sparse as sp
 from scipy.spatial import KDTree
 from scipy.spatial.distance import pdist
 
-import cwg_rust
 # ══════════════════════════════════════════════════════════════
-# ── 위치 1: 기존 cwg_rust import 블록을 아래로 교체 ──
 # ══════════════════════════════════════════════════════════════
  
 from cwg_rust import (
@@ -50,14 +48,14 @@ warnings.filterwarnings("ignore")
 
 
 # ================================================================
-# 공통 헬퍼
+# Shared helpers
 # ================================================================
 
 def _ensure_csr(X):
-    """adata.X → scipy CSR float32 (Rust sparse 함수용).
+    """Convert ``adata.X`` to SciPy CSR float32 for Rust sparse functions.
 
-    uint8/uint16/uint32/int* 등 정수형 행렬(ATAC-seq count 등)을
-    float32로 변환하여 Rust 구현체의 numeric dtype 요구사항을 충족.
+    Integer count matrices, including ATAC-seq matrices, are converted to
+    float32 to satisfy the numeric dtype expected by the Rust implementation.
     """
     if sp.issparse(X):
         X = X.tocsr() if X.format != "csr" else X
@@ -73,7 +71,7 @@ def _ensure_csr(X):
 # ================================================================
 
 class PhateGenePathFinder:
-    """PHATE 좌표 기반 A* 경로 탐색기."""
+    """A* path finder operating in PHATE coordinate space."""
 
     def __init__(self, adata, gene_col: str = "n_genes", gene_weight: float = 0.1):
         self.adata       = adata
@@ -82,14 +80,13 @@ class PhateGenePathFinder:
         self.gene_weight = gene_weight
         self.tree        = KDTree(self.coords)
         self.n_obs       = adata.n_obs
-        self.delta       = 0.0001  # 기본값; find_all_pairs에서 덮어씀
+        self.delta       = 0.0001  # Replaced by find_all_pairs.
 
     def get_neighbors(self, point_idx: int, delta: float) -> list:
         return self.tree.query_ball_point(self.coords[point_idx], r=delta)
 
 
     
-        # ── v2: noise 없음, L2 arc g, max_iter 적용 ──
     def find_all_pairs(
         self,
         low_indices:    list,
@@ -99,9 +96,10 @@ class PhateGenePathFinder:
         max_iter_ratio: float = 0.8,
     ) -> List[List[int]]:
         """
-        astar_all_pairs_v2 호출.
-        max_iter = cluster_count * max_iter_ratio (기본 0.8).
-        noise 없음 — Rust heuristic_l2 사용.
+        Call the Rust A* implementation.
+
+        ``max_iter`` is ``cluster_count * max_iter_ratio`` (default 0.8).
+        The implementation uses an L2 heuristic without injected noise.
         """
         self.delta  = delta
         low_int     = [self.adata.obs.index.get_loc(bc) for bc in low_indices]
@@ -118,12 +116,9 @@ class PhateGenePathFinder:
  
     
 ######
-#4월1~수정사항.py의 2가지 항목을 고려해서 - ATAC단의 작업이 다 끝내고 lv0 한쪽 나머지 만들때 즈음에 astar가 cb_rna-atac_not_re_mat 사이의 계산을
-##### 할때 클러스터 세포수가 비슷한 둘에서 갑자기 비효율적으로 시간이 늘어나는 경우를 해소해야함. 4월1~수정사항.py참조!
 
 
 # ══════════════════════════════════════════════════════════════
-# ── 위치 3: get_local_params 함수 바로 아래에 추가 ──
 # ══════════════════════════════════════════════════════════════
  
 def _estimate_params_phate(
@@ -132,10 +127,10 @@ def _estimate_params_phate(
     cluster_mask = None,
     max_cells:   int   = 30_000,
     delta_pct:   float = 5.0,
-    weight_pct:  float = 50.0,   # gene_weight는 median 스케일
+    weight_pct:  float = 50.0,   # Median scale used for gene_weight.
 ) -> Tuple[float, float]:
     """
-    PHATE pdist 기반 delta와 gene_weight 동시 추정.
+    Estimate ``delta`` and ``gene_weight`` from pairwise PHATE distances.
 
     delta      = percentile(pdist(phate), delta_pct)
     gene_weight = percentile(pdist(phate), weight_pct)
@@ -149,7 +144,7 @@ def _estimate_params_phate(
     gene_vals  = adata.obs[gene_col].values
     n_total    = len(coords)
 
-    # ── subset 선택 (delta와 동일 로직) ──
+    # Select the subset used for both distance scales.
     if cluster_mask is not None:
         idx = np.where(cluster_mask)[0]
         if len(idx) <= max_cells:
@@ -198,8 +193,8 @@ def _select_candidates(sub_ad, gene_col, cell_count, q_low, q_high, verbose):
         low_cands  = np.random.choice(lo_pool, size=min(100, len(lo_pool)),  replace=False)
         high_cands = np.random.choice(hi_pool, size=min(100, len(hi_pool)), replace=False)
         if verbose:
-            print(f"  [candidates] 확장 n={n}  lo={len(lo_pool)} hi={len(hi_pool)} "
-                  f"→ 샘플 low={len(low_cands)} high={len(high_cands)}")
+            print(f"  [candidates] expanded n={n} lo={len(lo_pool)} hi={len(hi_pool)} "
+                  f"-> sampled low={len(low_cands)} high={len(high_cands)}")
     return low_cands, high_cands
 
 
@@ -210,8 +205,8 @@ def _fallback_random_split(cell_indices, n_splits: int = 10, verbose: bool = Tru
     paths  = [list(map(int, s)) for s in splits if len(s) > 0]
     if verbose:
         sizes = [len(p) for p in paths]
-        print(f"  [fallback] random {n_splits}등분 → {len(paths)}개 path "
-              f"크기: {min(sizes)}~{max(sizes)}")
+        print(f"  [fallback] {n_splits} random partitions -> {len(paths)} paths "
+              f"of size {min(sizes)}-{max(sizes)}")
     return paths
 
 
@@ -232,14 +227,14 @@ def run_astar_for_cluster(
     verbose:         bool  = True,
 ) -> List[List[int]]:
     """
-    단일 cluster A* 경로 탐색 — v2 (개선판).
+    Find A* paths for one cluster.
  
-    기존 대비 변경점:
-      1. delta 추정 : get_local_params 루프(30회) → PHATE pdist 5th percentile (1회)
-      2. g(n)       : hop count → 누적 L2 arc length
-      3. h(n)       : L2(current→goal) + gene_weight×|Δgene|  (noise 없음, /delta 없음)
-      4. iter_count : pop 직후 → 노드 확정 시점 (stale pop 미카운트)
-      5. max_iter   : cluster_count × max_iter_ratio (기본 0.8)
+    Implementation details:
+      1. Estimate delta once from the fifth percentile of pairwise PHATE distances.
+      2. Use cumulative L2 arc length for g(n).
+      3. Use L2(current, goal) + gene_weight * abs(delta_gene) for h(n).
+      4. Count iterations when a node is finalized, excluding stale heap entries.
+      5. Set max_iter to cluster_count * max_iter_ratio (default 0.8).
     """
     t0         = time.time()
     cluster_id = str(cluster_id)
@@ -256,7 +251,7 @@ def run_astar_for_cluster(
  
     if cell_count <= min_paths:
         if verbose:
-            print(f"  cells({cell_count}) ≤ {min_paths} → A* 생략, fallback만 반환")
+            print(f"  cells({cell_count}) <= {min_paths}: skip A* and return fallback paths")
         return _fallback_random_split(cell_int, fallback_splits, verbose)
  
     low_cands, high_cands = _select_candidates(
@@ -265,7 +260,7 @@ def run_astar_for_cluster(
     if len(low_cands) == 0 or len(high_cands) == 0:
         return _fallback_random_split(cell_int, fallback_splits, verbose)
  
-    # ── A* 탐색 (v2) ────────────────────────────────────────
+    # ── A* search ────────────────────────────────────────
 
     t_delta0 = time.time()
     if delta is None or gene_weight is None:
@@ -277,13 +272,13 @@ def run_astar_for_cluster(
     else:
         delta_val, gene_weight_val = delta, gene_weight
     t_delta = time.time() - t_delta0
-    max_iter = int(cell_count * min(max_iter_ratio, 1.0))  # ← 추가
+    max_iter = int(cell_count * min(max_iter_ratio, 1.0))
     if verbose:
         print(f"  delta={delta_val:.6f}  gene_weight={gene_weight_val:.6f}  "
               f"( {t_delta:.3f}s)  max_iter={max_iter:,}")
               
-    t_astar0 = time.time()  # ← 추가
-    finder = PhateGenePathFinder(adata, gene_weight=gene_weight_val)  # 추정값 사용
+    t_astar0 = time.time()
+    finder = PhateGenePathFinder(adata, gene_weight=gene_weight_val)
     paths    = finder.find_all_pairs(
         low_cands, high_cands,
         delta_val,
@@ -299,11 +294,11 @@ def run_astar_for_cluster(
 
 
 # ================================================================
-# B. path 처리
+# B. Path processing
 # ================================================================
 
 def path_filter_process_(paths: List[List[int]]) -> List[List[int]]:
-    """길이 필터 → 포함 관계 merge → 중앙값 근처 선택."""
+    """Filter by length, merge contained paths and retain median-length paths."""
 
     def filter_paths(ps):
         mean_l = np.mean([len(p) for p in ps])
@@ -329,7 +324,7 @@ def path_filter_process_(paths: List[List[int]]) -> List[List[int]]:
             groups[find(i)] |= path_sets[i]
 
         merged = list(groups.values())
-        print(f"  병합 전: {n}개 → 병합 후: {len(merged)}개")
+        print(f"  before merge: {n}; after merge: {len(merged)}")
         return merged
 
     if len(paths) <= 30:
@@ -358,7 +353,7 @@ def build_cluster_conservative_graphs(
     verbose:        bool  = True,
 ) -> dict:
     """
-    cluster_id → paths 를 받아 cluster별로:
+    Convert a mapping of cluster identifiers to paths into conservative graphs:
       path_filter → CWG → conservative graph → DiGraph → gene list
     """
 
@@ -378,7 +373,7 @@ def build_cluster_conservative_graphs(
         cluster_mask = np.zeros(adata.n_obs, dtype=bool)
         cluster_mask[unique_cells] = True
 
-        X_csr = _ensure_csr(adata.X)   # uint32 등 정수형 → float32 변환
+        X_csr = _ensure_csr(adata.X)
 
         cwg = ClusterWeightedGraphRust.new_sparse(
             sparse_matrix          = X_csr,
@@ -397,13 +392,9 @@ def build_cluster_conservative_graphs(
 
         edge_data = build_conservative_graph(
             cwg, processed, X_csr,
-            use_greedy     = False,
             beta_threshold = beta_threshold,
             threshold      = threshold,
         )
-#birkhoff 정리의 좌변과 우변, 우변의 조건부 by graphon의 어떤 부분?,  x. = - del f는 반례이다.. 흠..
-#위 맥락을 필요한 만큼만 정리하고, 아래의 contrib * beta로 판단할지 어떻게할지.. - 이전의 rs함수에서 어떻게 mean를 취할지도 정리해야함.
-
         df = pd.DataFrame({
             "source":    edge_data["source"],
             "target":    edge_data["target"],
@@ -438,7 +429,7 @@ def build_cluster_conservative_graphs(
 # D. LIANA R-L map
 # ================================================================
 
-# 종(organism) 자동 감지
+# Organism detection
 _LIANA_RESOURCE = {
     "human": "consensus",
     "mouse": "mouseconsensus",
@@ -446,14 +437,14 @@ _LIANA_RESOURCE = {
 
 def detect_organism(adata) -> str:
     """
-    adata.var_names 패턴으로 human / mouse 자동 감지.
+    Infer human or mouse from gene-symbol patterns in ``adata.var_names``.
 
-    - Human: 전체 대문자 (CD8A, GAPDH, TP53)
+    - Human: predominantly uppercase symbols (CD8A, GAPDH, TP53)
     - Mouse: Title case (Cd8a, Gapdh, Trp53)
 
     Returns
     -------
-    "human" 또는 "mouse"
+    ``"human"`` or ``"mouse"``.
     """
     _mouse_pat = re.compile(r'^[A-Z][a-z]')
     genes = [str(g) for g in adata.var_names[: min(5000, adata.n_vars)] if str(g)]
@@ -476,9 +467,9 @@ def build_rl_gene_map(
     verbose:          bool  = True,
 ) -> dict:
     """
-    LIANA 결과에서 cluster별 (ligand, receptor) edge 추출.
+    Extract cluster-specific ligand-receptor edges from LIANA results.
 
-    organism 파라미터에 따라 LIANA resource를 자동 선택:
+    Select the LIANA resource from the requested organism:
       human → "consensus"
       mouse → "mouseconsensus"
 
@@ -498,7 +489,7 @@ def build_rl_gene_map(
     try:
         import liana as li
     except ImportError:
-        raise ImportError("liana 패키지가 필요합니다: pip install liana")
+        raise ImportError("The liana package is required: pip install liana")
 
     resource_name = _LIANA_RESOURCE.get(organism, "consensus")
     if verbose:
@@ -506,7 +497,7 @@ def build_rl_gene_map(
 
     if liana_key not in adata.uns or adata.uns[liana_key] is None:
         if verbose:
-            print("LIANA 결과 없음 → 계산 시작...")
+            print("No LIANA result found; starting calculation...")
         adata.raw = adata
         li.mt.rank_aggregate(
             adata, groupby=leiden_key,
@@ -520,7 +511,7 @@ def build_rl_gene_map(
     sig_res = liana_res[mask].copy()
 
     if verbose:
-        print(f"\n필터링: {len(liana_res):,} → {len(sig_res):,}")
+        print(f"\nFiltered LIANA rows: {len(liana_res):,} -> {len(sig_res):,}")
 
     cluster_RL = {}
     for cid in np.unique(adata.obs[leiden_key]):
@@ -569,16 +560,18 @@ def build_rl_gene_map(
 
 
 # ================================================================
-# E. KEGG pathway 파싱 / 선택 / edge 추출
+# E. KEGG pathway parsing, selection and edge extraction
 # ================================================================
 
 def parse_all_kegg_xmls_raw(
     kegg_xml_dir: str,
 ) -> List[dict]:
     """
-    KEGG XML → raw intermediate list (adata 필터 없음, 전역 캐시용).
-    각 항목: {"name": str, "edge_df": DataFrame, "all_genes": set}
-    compound 노드 제거 및 gene-gene edge만 유지하지만 adata 필터는 적용하지 않음.
+    Parse KEGG XML into an unfiltered intermediate list for the global cache.
+
+    Each item contains ``name``, ``edge_df`` and ``all_genes``. Compound nodes
+    are removed and only gene-gene edges are retained. AnnData gene filtering
+    is applied later.
     """
     from keggx import KEGG
 
@@ -622,8 +615,8 @@ def filter_kegg_pathways(
     min_genes: int = 5,
 ) -> List[KEGGPathway]:
     """
-    raw_pathways (parse_all_kegg_xmls_raw 결과)에 adata.var_names 필터를 적용하여
-    KEGGPathway 리스트 반환. sampleid별 캐시에 사용.
+    Restrict parsed pathways to ``adata.var_names`` and return KEGGPathway
+    objects for the sample-specific cache.
     """
     adata_genes = set(adata.var_names)
     kegg_pathways, skipped_low = [], 0
@@ -673,7 +666,7 @@ def parse_all_kegg_xmls(
     adata,
     min_genes: int = 5,
 ) -> List[KEGGPathway]:
-    """KEGG XML → KEGGPathway 리스트 (compound 제거, adata 필터). 기존 인터페이스 유지."""
+    """Parse KEGG XML, remove compounds and restrict edges to AnnData genes."""
     raw = parse_all_kegg_xmls_raw(kegg_xml_dir)
     return filter_kegg_pathways(raw, adata, min_genes)
 
@@ -693,13 +686,13 @@ def compute_and_select_top_kegg(
     cluster_indices = np.where(cluster_mask)[0].tolist()
 
     if mode == "cluster_mean":
-        # 새 함수: cluster mean α → G2 한 번 계산
+        # Calculate one graph value from cluster-mean expression.
         norm_dict = compute_all_kegg_norms_cluster_mean(
             sparse_X, adata_genes, kegg_pathways, cluster_indices
         )
         scores = [(pw, norm_dict.get(pw.name, 0.0)) for pw in kegg_pathways]
     else:
-        # 기존: per-cell norms → cluster 평균
+        # Calculate per-cell norms and then average within the cluster.
         all_norms = compute_all_kegg_norms_sparse(sparse_X, adata_genes, kegg_pathways)
         scores = [
             (pw, float(np.mean(np.array(all_norms[pw.name])[cluster_indices])))
@@ -717,39 +710,40 @@ def get_top_edges_per_pathway(
     top_n_edges: int = 5,
 ) -> Dict[str, pd.DataFrame]:
     """
-    cluster 평균 발현량 기반 contribution 계산 → pathway별 top edge DataFrame 반환.
+    Calculate edge contributions from cluster-mean expression and return the
+    highest-contributing edges for each pathway.
     
-    alpha_G: cluster 내 모든 유전자의 평균 발현량 합
+    ``alpha_G`` is the sum of cluster-mean expression over all genes.
     
     Parameters
     ----------
     adata : AnnData
         gene expression data
     top_pathways : List[KEGGPathway]
-        pathway 리스트
+        Pathways to evaluate.
     cluster_id : str
         cluster ID
     cluster_key : str
-        adata.obs의 cluster 컬럼명
+        Cluster-label column in ``adata.obs``.
     top_n_edges : int
-        pathway별 상위 edge 수
+        Number of edges returned per pathway.
     
     Returns
     -------
     results : Dict[str, pd.DataFrame]
-        contribution 기준 상위 edges (pathway별)
+        Highest-contributing edges for each pathway.
         
-        DataFrame 컬럼:
-        - source, target: edge 노드
-        - weight: edge 가중치
-        - alpha_i, alpha_j: 각 유전자 발현량
-        - alpha_i*alpha_j: 발현량 곱
-        - beta: 상호작용 강도 (sqrt(|w + alpha_i + alpha_j|))f
-        - contribution: pathway 내 상대적 중요도
+        DataFrame columns:
+        - source, target: edge endpoints
+        - weight: prior edge weight
+        - alpha_i, alpha_j: cluster-mean endpoint expression
+        - alpha_i*alpha_j: endpoint-expression product
+        - beta: ``sqrt(abs(w + alpha_i + alpha_j))``
+        - contribution: expression-weighted edge contribution
     """
     
     # ──────────────────────────────────────────────────────
-    # Step 1: cluster 데이터 추출
+    # Step 1: select cluster cells.
     # ──────────────────────────────────────────────────────
     mask = (adata.obs[cluster_key].astype(str) == str(cluster_id)).values
     X_cluster = adata.X[mask]
@@ -761,23 +755,23 @@ def get_top_edges_per_pathway(
     gene_to_idx = {g: i for i, g in enumerate(adata.var_names)}
     
     # ──────────────────────────────────────────────────────
-    # Step 2: alpha_G 계산 (cluster 전체 유전자 합)
+    # Step 2: calculate alpha_G over all genes.
     # ──────────────────────────────────────────────────────
-    # 방식 2: cluster 내 모든 유전자의 발현량 합
+    # Sum cluster-mean expression over all genes.
     alpha_G = gene_mean.sum()
     alpha_g_sq = alpha_G ** 2
     
-    print(f"\n[alpha_G 계산]")
+    print("\n[alpha_G calculation]")
     print(f"  cluster: {cluster_id}")
-    print(f"  alpha_G (cluster 전체 발현량): {alpha_G:.6f}")
+    print(f"  alpha_G (cluster-wide expression sum): {alpha_G:.6f}")
     print(f"  alpha_G^2: {alpha_g_sq:.6f}")
     
     if alpha_G < 1e-10:
-        print(f"  ⚠️ 경고: alpha_G가 너무 작음 ({alpha_G})")
-        print(f"  → contribution을 계산할 수 없습니다")
+        print(f"  Warning: alpha_G is too small ({alpha_G})")
+        print("  Edge contributions cannot be calculated")
     
     # ──────────────────────────────────────────────────────
-    # Step 3: pathway별 처리
+    # Step 3: process each pathway.
     # ──────────────────────────────────────────────────────
     results = {}
     
@@ -787,14 +781,14 @@ def get_top_edges_per_pathway(
         print(f"\n[{pathway.name}]")
         print(f"  edges: {len(edges_data['source'])}")
         
-        # edge별 계산
+        # Calculate each edge.
         rows = []
         for src, tgt, w in zip(
             edges_data["source"],
             edges_data["target"],
             edges_data["weight"]
         ):
-            # 발현량 추출
+            # Read endpoint expression.
             alpha_i = (
                 gene_mean[gene_to_idx[src]]
                 if src in gene_to_idx
@@ -806,11 +800,10 @@ def get_top_edges_per_pathway(
                 else 0.0
             )
             
-            # beta 계산 (제곱근)
+            # Calculate beta.
             beta = abs(w + alpha_i + alpha_j) ** 0.5
             
-            # contribution 계산 (정규화)
-            # 분모: alpha_G^2 (cluster 전체)
+            # Normalize the contribution by alpha_G squared.
             contribution = (
                 (alpha_i * alpha_j / alpha_g_sq) * (beta ** 2)
                 if alpha_G > 1e-10
@@ -829,13 +822,12 @@ def get_top_edges_per_pathway(
             })
 
         # ──────────────────────────────────────────────────
-        # Step 4: beta 기준으로 정렬 (edge interaction strength)
-        # pathway activity는 이미 norm 기준으로 정렬됨
+        # Step 4: rank edges by beta. Pathways are already ranked by norm.
         # ──────────────────────────────────────────────────
         df = pd.DataFrame(rows)
 
         df_sorted = df.sort_values("contribution", ascending=False)
         results[pathway.name] = df_sorted.head(top_n_edges).reset_index(drop=True)
 
-        print(f"  ✓ top {top_n_edges} edges (contribution 기준) 추출 완료")
+        print(f"  Extracted the top {top_n_edges} edges by contribution")
     return results
