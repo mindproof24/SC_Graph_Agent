@@ -256,8 +256,8 @@ class KEGG:
                     if graphics is not None:
                         gene_name = graphics.attrib.get('name', 'N/A').split(', ')[0].rstrip('.')
                         entry_id = entry.attrib['id']
-                        id_to_gene_name[entry_id] = gene_name  # 대문자로 저장
-            #print("ID to Gene Name mapping created:", {k: v for k, v in list(id_to_gene_name.items())[:5]})  # 디버깅 출력
+                        id_to_gene_name[entry_id] = gene_name  
+            #print("ID to Gene Name mapping created:", {k: v for k, v in list(id_to_gene_name.items())[:5]})  
     
             for group_element in self._groups:
                 group_id = group_element.get('id')
