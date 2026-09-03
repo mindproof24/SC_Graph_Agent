@@ -1175,20 +1175,20 @@ async def main():
     p = argparse.ArgumentParser(description="GRPO dataset evaluation runner")
     p.add_argument("--jsonl",         required=True,
                    help="JSONL file to evaluate")
-    p.add_argument("--ollama",        action="store_true",        help="Ollama 모드 (gpt-oss:20b)")
+    p.add_argument("--ollama",        action="store_true",        help="Use the Ollama backend (gpt-oss:20b)")
     p.add_argument("--ollama-model",  default=OLLAMA_MODEL,       help=f"Ollama 모델명 (default: {OLLAMA_MODEL})")
-    p.add_argument("--base-only",     action="store_true",        help="HF base 모델")
+    p.add_argument("--base-only",     action="store_true",        help="Evaluate the Hugging Face base model")
     p.add_argument("--ckpt",          default=None,               help="HF LoRA checkpoint path")
-    p.add_argument("--vllm",          action="store_true",        help="vLLM AsyncLLM 백엔드 (배칭+동시 채점). --ckpt와 함께 사용")
-    p.add_argument("--base-model",    default=None,               help="vLLM base 모델 override (예: unsloth/Qwen3.5-27B, LoRA 없이 원모델 평가용)")
-    p.add_argument("--concurrency",   type=int,   default=8,      help="--vllm 동시 item 수 (MCP_N_WORKERS와 함께 조율)")
-    p.add_argument("--tool-cutoff",   type=int,   default=None,   help="tool budget cap (기본 TOOL_CALL_LIMIT=10). 도달 시 강제 final + penalty 임계")
-    p.add_argument("--execute-only",  action="store_true",        help="execute_pipeline_code 도구만 모델에 노출")
+    p.add_argument("--vllm",          action="store_true",        help="Use the vLLM AsyncLLM backend with batching and concurrent evaluation; requires --ckpt")
+    p.add_argument("--base-model",    default=None,               help="Override the vLLM base model, for example unsloth/Qwen3.5-27B for evaluation without LoRA")
+    p.add_argument("--concurrency",   type=int,   default=8,      help="Number of concurrent vLLM items; coordinate with MCP_N_WORKERS")
+    p.add_argument("--tool-cutoff",   type=int,   default=None,   help="Tool budget cap; defaults to TOOL_CALL_LIMIT=10 and triggers a forced final response at the limit")
+    p.add_argument("--execute-only",  action="store_true",        help="Expose only execute_pipeline_code to the model")
     p.add_argument("--adk",           action="store_true",        help="ADK runner (placeholder)")
-    p.add_argument("--n-samples",     type=int,   default=None,   help="평가할 최대 item 수")
-    p.add_argument("--skip",          type=int,   default=0,      help="앞의 N개 item 건너뜀 (이어서 실행 시)")
-    p.add_argument("--filter-id",     default=None,               help="특정 id만 실행 (쉼표 구분으로 다중 지정 가능)")
-    p.add_argument("--n-repeats",     type=int,   default=1,      help="각 item을 N번 반복 실행 (sampling 변동성 측정용)")
+    p.add_argument("--n-samples",     type=int,   default=None,   help="Maximum number of items to evaluate")
+    p.add_argument("--skip",          type=int,   default=0,      help="Skipt the first N items when resuming")
+    p.add_argument("--filter-id",     default=None,               help="Run only the specified comma-separated item IDs")
+    p.add_argument("--n-repeats",     type=int,   default=1,      help="Repeat each item N times to measure sampling variability")
     p.add_argument("--max-turns",     type=int,   default=MAX_TURNS)
     p.add_argument("--max-tokens",    type=int,   default=2048)
     p.add_argument("--max-model-len", type=int,   default=16384,
@@ -1198,10 +1198,10 @@ async def main():
     p.add_argument("--seed",          type=int,   default=OLLAMA_SEED,
                    help="Base Ollama seed. If set, each item/repeat uses deterministic seed = base + crc32(item_id) + repeat.")
     p.add_argument("--kg-guided",     action="store_true",
-                   help="KG 워크플로우 강제 (gbm_neural_topn 전용 system prompt 사용)")
+                   help="Force the KG workflow using the gbm_neural_topn system prompt")
     p.add_argument("--test-prompt",   action="store_true",
-                   help="resolve_query_to_context_set → get_expressed_dorothea_edges → custom_pathway_calc 흐름 권장 테스트용 system prompt")
-    p.add_argument("--out",           default=None,               help="결과 JSONL 저장 경로")
+                   help="Use a test prompt recommending resolve_query_to_context_set, get_expressed_dorothea_edges and custom_pathway_calc")
+    p.add_argument("--out",           default=None,               help="Output JSONL path")
     args = p.parse_args()
 
     if not args.ollama and not args.base_only and not args.ckpt and not args.adk and not args.vllm:
@@ -1220,21 +1220,21 @@ async def main():
         items = [it for it in items if it["id"] in keep]
         matched = {it["id"] for it in items}
         missing = keep - matched
-        print(f"[filter-id] {before} → {len(items)}개 (요청 {len(keep)}개 중 {len(matched)}개 매칭)")
+        print(f"[filter-id] retained {len(item)} for {before} items; matched {len(matched)} of {len(keep)} requested IDs")
         if missing:
-            print(f"[filter-id] 미매칭 id: {sorted(missing)}")
+            print(f"[filter-id] unmatched IDs: {sorted(missing)}")
         if not items:
-            print("[filter-id] 매칭된 item이 없어 종료")
+            print("[filter-id] 매칭된 no matching items; exiting")
             return
     if args.skip:
         items = items[args.skip:]
-        print(f"[skip] 앞의 {args.skip}개 건너뜀")
+        print(f"[skip] skipped the first {args.skip} items")
     if args.n_samples:
         items = items[:args.n_samples]
-    print(f"평가 대상: {len(items)}개  ({args.jsonl})")
+    print(f"Evaluation items: {len(items)} ({args.jsonl})")
 
     if args.adk:
-        print("[ADK] placeholder — 미구현")
+        print("[ADK] placeholder — not implemented")
         return
 
     use_ollama   = args.ollama
@@ -1243,27 +1243,27 @@ async def main():
     hf_tok       = None
     if args.kg_guided:
         active_system_prompt = SYSTEM_PROMPT_KG_GUIDED
-        print("[kg-guided] KG 워크플로우 강제 system prompt 적용")
+        print("[kg-guided] using the KG-workflow system prompt")
     elif args.test_prompt:
         active_system_prompt = SYSTEM_PROMPT_TEST
-        print("[test-prompt] SYSTEM_PROMPT_TEST (resolve_query→expressed_dorothea→custom_pathway 흐름) 적용")
+        print("[test-prompt] using the resolve-query to expressed-DorothEA to custom-pathway workflow prompt")
     else:
         active_system_prompt = None
 
     if use_ollama:
         label = f"ollama:{ollama_model}" + ("_kgguided" if args.kg_guided else "")
         print(f"\n[Ollama] model={ollama_model}  url={OLLAMA_API_URL}")
-        # Ollama 연결 확인
+        # Check the Ollama connection
         async with httpx.AsyncClient(timeout=10) as http:
             try:
                 r = await http.get(f"{OLLAMA_API_URL}/api/tags")
                 names = [m["name"] for m in r.json().get("models", [])]
                 if ollama_model not in names:
-                    print(f"[Ollama] 경고: '{ollama_model}' 목록에 없음. 사용 가능: {names}")
+                    print(f"[Ollama] warning: '{ollama_model}' is unavailable; available models : {names}")
                 else:
-                    print(f"[Ollama] OK — {ollama_model} 확인")
+                    print(f"[Ollama] OK — found {ollama_model}")
             except Exception as e:
-                print(f"[Ollama] 연결 실패: {e}")
+                print(f"[Ollama] connection failed: {e}")
                 return
     elif args.vllm:
         global USE_VLLM, VLLM_ENGINE, VLLM_TOK, VLLM_LORA, TOOL_CALL_LIMIT, EXECUTE_ONLY
@@ -1294,8 +1294,8 @@ async def main():
         label = (adapter or "vllm-base") + "_vllm"
     else:
         from unsloth import FastLanguageModel
-        # --ckpt가 있으면 adapter_config.json의 base_model_name_or_path를 따라감
-        # (HF_MODEL_NAME=gpt-oss 하드코딩이 Qwen3.5 adapter와 불일치하던 버그 수정)
+        # When --ckpt is supplied, use base_model_name_or_path from adapter_config.json.
+        # This fixes a historical mismatch between the hard-coded HF_MODEL_NAME=gpt-oss and a Qwen3.5 adapter.
         base_model = HF_MODEL_NAME
         if args.ckpt:
             _cfg = os.path.join(args.ckpt, "adapter_config.json")
@@ -1318,18 +1318,18 @@ async def main():
         hf_model.eval()
         label = ("BASE" if args.base_only else args.ckpt) + ("_kgguided" if args.kg_guided else "")
 
-    # MCP 연결 확인 (NO_KG: KG 도구 대신 execute_pipeline_code로 핑 — KG graphml 의존 제거)
+    # Check MCP connectivity with execute_pipeline_code, avoiding a KG GraphML dependency in NO_KG mode.
     print("\n[MCP] Testing connection...")
     ping = await call_mcp_tool("execute_pipeline_code", {"sampleid": items[0]["sampleid"], "code": "print('ping')"})
     try:
         if json.loads(ping).get("success") is False:
-            print(f"[MCP] 연결 실패: {ping[:200]}")
+            print(f"[MCP] connection failed: {ping[:200]}")
             return
     except Exception:
         pass
     print("[MCP] OK")
 
-    # 평가 루프
+    # Evaluation loop.
     LOG_DIR.mkdir(parents=True, exist_ok=True)
     out_path = Path(args.out) if args.out else \
         LOG_DIR / f"eval_{Path(args.jsonl).stem}_{label.replace('/', '_').replace(':', '_')}.jsonl"
@@ -1337,7 +1337,7 @@ async def main():
 
     n_repeats = max(1, args.n_repeats)
     total_runs = len(items) * n_repeats
-    # (item, rep) 작업 목록
+    # Build the list of (item, repeat) jobs.
     jobs = [(item, rep) for item in items for rep in range(n_repeats)]
     results = []
 
@@ -1358,8 +1358,8 @@ async def main():
 
     with out_path.open("w") as f:
         if USE_VLLM:
-            # vLLM: 동시 실행 (continuous batching + MCP sticky 분산)
-            # 증분 저장 + 작업별 예외격리 — 한 item 실패/엔진 이상이 전체를 날리지 않게
+            # Run the vLLM jobs concurrently with continuous batching and sticky MCP workers.
+            # Save incrementally and isolate per-job failures so one failure does not discard the full batch.
             sem = asyncio.Semaphore(max(1, args.concurrency))
             done = 0
             async def _guarded(item, rep):
@@ -1384,9 +1384,9 @@ async def main():
                 r = await fut
                 results.append(r)
                 f.write(json.dumps(r, ensure_ascii=False) + "\n")
-                f.flush()   # 완료 즉시 기록 → 중간 크래시에도 보존
+                f.flush()   # Flush each completed result immediately to preserve progress if a later job fails.
         else:
-            # 기존 직렬 (ollama/unsloth)
+            # Serial execution for Ollama or Unsloth.
             for run_idx, (item, rep) in enumerate(jobs, 1):
                 tag = f"  rep={rep+1}/{n_repeats}" if n_repeats > 1 else ""
                 print(f"\n[{run_idx}/{total_runs}] {item['id']}  level={item['level']}{tag}")
@@ -1397,7 +1397,7 @@ async def main():
                 f.flush()
 
     print_summary(results, label)
-    print(f"\n결과 저장: {out_path}")
+    print(f"\nResults saved to: {out_path}")
 
 
 if __name__ == "__main__":
