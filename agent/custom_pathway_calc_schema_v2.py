@@ -1,7 +1,7 @@
-# custom_pathway_calc 갱신 스키마 (sc_graph_mcp_server.py 최신, Jun6 기준)
-# eval_grpo_dataset_NO_KG_Tool.py 의 TOOLS 리스트에서 기존 custom_pathway_calc 블록을 이걸로 교체.
-# 변경점: verbose / verbose_top_n 추가, description에 edge_contributions(narrow-down 근거) 명시,
-#         cluster_key='leiden' 가 반드시 존재해야 함을 명시(없으면 먼저 sc.tl.leiden 실행).
+# Updated custom_pathway_calc schema aligned with the current sc_graph_mcp_server.py (June 6 revision).
+# Replace the previous custom_pathway_calc block in eval_grpo_dataset_NO_KG_Tool.py with this schema.
+# Changes: add verbose and verbose_top_n and document edge_contributions as narrowing evidence;
+# require cluster_key='leiden' to exist, running sc.tl.leiden first when it is absent.
 
 CUSTOM_PATHWAY_CALC_TOOL = {"type": "function", "function": {
     "name": "custom_pathway_calc",
