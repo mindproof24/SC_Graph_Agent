@@ -53,7 +53,7 @@ reproducibility/   main and supplementary figure workflows
 vendor/keggx/      modified KGML parser with upstream attribution
 ```
 
-  ## Installation
+  ### Installation
 
   ### Requirements
 
