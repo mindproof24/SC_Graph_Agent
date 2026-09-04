@@ -74,15 +74,10 @@ vendor/keggx/      modified KGML parser with upstream attribution
   A GPU with at least 24 GB of memory is recommended for the Q4_K_M model with
   a 16k context. CPU execution is possible but is generally too slow for
   interactive analysis.
-•  Resource    Requirement                    Details
-  ━━━━━━━━━━  ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━  ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-   Disk        ~35 GB free during setup       ollama create copies the 16 GiB GGUF into ~/.ollama/models/blobs, so the file exists twice until the
-                                              downloaded GGUF is removed. Additional context variants (4k, 8k, 16k and 32k) reuse the same blob and
-                                              require negligible additional storage. Set OLLAMA_MODELS to relocate the model store if necessary.
-  ──────────  ─────────────────────────────  ────────────────────────────────────────────────────────────────────────────────────────────────────────
-   GPU         ~23 GiB VRAM at 16k context    The measured peak was 22.9 GiB, comprising 15.3 GiB for model weights, 4.7 GiB for the KV cache and
-                                              1.1 GiB for the model computation graph. A 24 GB GPU is close to capacity; use ctx8k if the model does
-                                              not fit. A 32k context requires approximately 27 GiB.
+| Resource | Requirement | Details |
+| :--- | :--- | :--- |
+| **Disk** | ~35 GB free during setup | `ollama create` copies the 16 GiB GGUF into `~/.ollama/models/blobs`, so the file exists twice until the downloaded GGUF is removed. Additional context variants (4k, 8k, 16k and 32k) reuse the same blob and require negligible additional storage. Set `OLLAMA_MODELS` to relocate the model store if necessary. |
+| **GPU** | ~23 GiB VRAM at 16k context | The measured peak was 22.9 GiB, comprising 15.3 GiB for model weights, 4.7 GiB for the KV cache and 1.1 GiB for the compute memory. A 24 GB GPU is close to capacity; use `ctx8k` if the model does not fit. A 32k context requires approximately 27 GiB. |
 
 
   ### Clone the repository
