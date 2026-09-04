@@ -53,31 +53,108 @@ reproducibility/   main and supplementary figure workflows
 vendor/keggx/      modified KGML parser with upstream attribution
 ```
 
-## Installation
+  ## Installation
 
-The runtime requires Python, a Rust toolchain and
-[Ollama](https://ollama.com/). From the repository root:
+  ### Requirements
 
-```bash
-python -m venv .venv
-source .venv/bin/activate
-python -m pip install --upgrade pip maturin
-python -m pip install -r requirements.txt
+  The tested installation requires:
 
-cd rust/cwg_rust
-maturin develop --release
-cd ../..
-```
+  - Git;
+  - Python 3.11 or later;
+  - a Rust toolchain installed through `rustup`;
+  - Ollama with Qwen3.5 renderer and tool-call support; and
+  - approximately 35 GB of free disk space when installing the released GGUF
+    model.
 
-Verify that the compiled extension is available:
+  The pinned Python environment includes `anndata==0.12.10` and should be
+  installed with Python 3.11 or later. The released model is approximately
+  17 GB, and Ollama creates a separate model blob during registration. We
+  recommend at least 35 GB of free space for installation and temporary files.
 
-```bash
-python - <<'PY'
-import cwg_rust
-print(cwg_rust)
-PY
-```
+  A GPU with at least 24 GB of memory is recommended for the Q4_K_M model with
+  a 16k context. CPU execution is possible but is generally too slow for
+  interactive analysis.
 
+  ### Clone the repository
+
+  ```bash
+  git clone https://github.com/mindproof24/SC_Graph_Agent.git
+  cd SC_Graph_Agent
+
+  The following commands must be run from the repository root because
+  requirements.txt installs the vendored keggx package through the relative
+  path -e ./vendor/keggx.
+
+  ### Create the Python environment
+
+  Use python3.11 explicitly on systems where python is unavailable or refers
+  to an older installation.
+
+  python3.11 --version
+  python3.11 -m venv .venv
+  source .venv/bin/activate
+
+  python -m pip install --upgrade pip
+  python -m pip install -r requirements.txt
+
+  After activation, python refers to the interpreter inside .venv.
+
+  ### Install Rust
+
+  If Rust is not already installed, install it through rustup:
+
+  curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | sh
+  source "$HOME/.cargo/env"
+  cargo --version
+
+  The Cargo environment must be loaded in the current shell before compiling
+  the extension. New terminal sessions may also require:
+
+  source "$HOME/.cargo/env"
+
+  ### Build the Rust extension
+
+  From the repository root, with the Python environment activated:
+
+  maturin develop --release --manifest-path rust/cwg_rust/Cargo.toml
+
+  Verify the installation:
+
+  python - <<'PY'
+  import anndata
+  import cwg_rust
+
+  print("anndata:", anndata.__version__)
+  print("cwg_rust:", cwg_rust.__file__)
+  PY
+
+  ### Install and verify Ollama
+
+  Install an Ollama release that supports the Qwen3.5 renderer and tool-call
+  format. The released model package was tested with Ollama 0.24.0.
+
+  ollama --version
+
+  On Linux with an NVIDIA GPU, the installed driver must be compatible with the
+  Ollama CUDA backend. An incompatible driver may cause Ollama to run the model
+  on the CPU without terminating the request. A successful response therefore
+  does not by itself confirm GPU execution.
+
+  After creating and running the model, check the active processor in another
+  terminal:
+
+  ollama ps
+  nvidia-smi
+
+  The PROCESSOR column reported by ollama ps should indicate GPU use.
+
+  | Disk | **~35 GB free during setup** | `ollama create` copies the 16 GiB GGUF into
+  `~/.ollama/models/blobs`, so the file exists twice until you delete the
+  download. Extra context variants (4k/8k/16k/32k) reuse the same blob and cost
+  nothing. Relocate the store with `OLLAMA_MODELS` if space is tight. |
+  | GPU | **~23 GiB VRAM at 16k context** | measured peak 22.9 GiB
+  (weights 15.3 + KV cache 4.7 + compute graph 1.1). A 24 GB card is close to
+  full; use `ctx8k` if it does not fit. 32k needs roughly 27 GiB. |
 ## Configure the model
 
 Download the GGUF and place it in `ollama/models/`, or create a symbolic link:
