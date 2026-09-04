@@ -232,5 +232,3 @@ provided in [`vendor/keggx/NOTICE`](vendor/keggx/NOTICE) and
 [`vendor/keggx/LICENSE`](vendor/keggx/LICENSE). KEGG data and KGML records are
 not relicensed by this repository and remain subject to the applicable KEGG
 terms of use.
-not relicensed by this repository and remain subject to the applicable KEGG
-terms of use.
