@@ -147,14 +147,6 @@ vendor/keggx/      modified KGML parser with upstream attribution
   ```
   The PROCESSOR column reported by ollama ps should indicate GPU use.
 
-  | Disk | **~35 GB free during setup** | `ollama create` copies the 16 GiB GGUF into
-  `~/.ollama/models/blobs`, so the file exists twice until you delete the
-  download. Extra context variants (4k/8k/16k/32k) reuse the same blob and cost
-  nothing. Relocate the store with `OLLAMA_MODELS` if space is tight. |
-  
-  | GPU | **~23 GiB VRAM at 16k context** | measured peak 22.9 GiB
-  (weights 15.3 + KV cache 4.7 + compute graph 1.1). A 24 GB card is close to
-  full; use `ctx8k` if it does not fit. 32k needs roughly 27 GiB. |
 ## Configure the model
 
 Download the GGUF and place it in `ollama/models/`, or create a symbolic link:
