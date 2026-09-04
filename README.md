@@ -80,7 +80,7 @@ vendor/keggx/      modified KGML parser with upstream attribution
   ```bash
   git clone https://github.com/mindproof24/SC_Graph_Agent.git
   cd SC_Graph_Agent
-
+  ```
   The following commands must be run from the repository root because
   requirements.txt installs the vendored keggx package through the relative
   path -e ./vendor/keggx.
@@ -89,29 +89,28 @@ vendor/keggx/      modified KGML parser with upstream attribution
 
   Use python3.11 explicitly on systems where python is unavailable or refers
   to an older installation.
-
+  ```bash
   python3.11 --version
   python3.11 -m venv .venv
   source .venv/bin/activate
-
   python -m pip install --upgrade pip
   python -m pip install -r requirements.txt
-
+  ```
   After activation, python refers to the interpreter inside .venv.
 
   ### Install Rust
 
   If Rust is not already installed, install it through rustup:
-
+  ```bash
   curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | sh
   source "$HOME/.cargo/env"
   cargo --version
-
+  ```
   The Cargo environment must be loaded in the current shell before compiling
   the extension. New terminal sessions may also require:
-
+  ```bash
   source "$HOME/.cargo/env"
-
+  ```
   ### Build the Rust extension
 
   From the repository root, with the Python environment activated:
@@ -119,7 +118,7 @@ vendor/keggx/      modified KGML parser with upstream attribution
   maturin develop --release --manifest-path rust/cwg_rust/Cargo.toml
 
   Verify the installation:
-
+  ```bash
   python - <<'PY'
   import anndata
   import cwg_rust
@@ -127,14 +126,14 @@ vendor/keggx/      modified KGML parser with upstream attribution
   print("anndata:", anndata.__version__)
   print("cwg_rust:", cwg_rust.__file__)
   PY
-
+  ```
   ### Install and verify Ollama
 
   Install an Ollama release that supports the Qwen3.5 renderer and tool-call
   format. The released model package was tested with Ollama 0.24.0.
-
+  ```bash
   ollama --version
-
+  ```
   On Linux with an NVIDIA GPU, the installed driver must be compatible with the
   Ollama CUDA backend. An incompatible driver may cause Ollama to run the model
   on the CPU without terminating the request. A successful response therefore
@@ -142,10 +141,10 @@ vendor/keggx/      modified KGML parser with upstream attribution
 
   After creating and running the model, check the active processor in another
   terminal:
-
+  ```bash
   ollama ps
   nvidia-smi
-
+  ```
   The PROCESSOR column reported by ollama ps should indicate GPU use.
 
   | Disk | **~35 GB free during setup** | `ollama create` copies the 16 GiB GGUF into
