@@ -21,7 +21,7 @@ baseline variant of REINFORCE++.
 - an AnnData-aware analysis server built with FastMCP;
 - KEGG and customized pathway scoring with edge-level output;
 - A* path search and TF-target edge prioritization;
-- Rust/PyO3 kernels for repeated graph calculations;
+- Rust kernels for repeated graph calculations;
 - an Ollama-based interactive agent with optional researcher guidance; and
 - figure-specific benchmark, source-data and reproduction workflows.
 
@@ -53,7 +53,7 @@ reproducibility/   main and supplementary figure workflows
 vendor/keggx/      modified KGML parser with upstream attribution
 ```
 
-  ### Installation
+  ## Installation
 
   ### Requirements
 
@@ -74,6 +74,14 @@ vendor/keggx/      modified KGML parser with upstream attribution
   A GPU with at least 24 GB of memory is recommended for the Q4_K_M model with
   a 16k context. CPU execution is possible but is generally too slow for
   interactive analysis.
+    | Resource | Requirement | Details |
+  |---|---|---|
+  | Disk |~35 GB free during setup| ollama create copies the 16 GiB GGUF into ~/.ollama/models/blobs, so the file exists twice until the
+                                              downloaded GGUF is removed. Additional context variants (4k, 8k, 16k and 32k) reuse the same blob and
+                                              require negligible additional storage. Set OLLAMA_MODELS to relocate the model store if necessary.|
+  | GPU | ~23 GiB VRAM at 16k context  | ollama create copies the 16 GiB GGUF into ~/.ollama/models/blobs, so the file exists twice until the
+                                              downloaded GGUF is removed. Additional context variants (4k, 8k, 16k and 32k) reuse the same blob and
+                                              require negligible additional storage. Set OLLAMA_MODELS to relocate the model store if necessary. |
 
   ### Clone the repository
 
