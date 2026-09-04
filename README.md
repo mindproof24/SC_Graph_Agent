@@ -151,6 +151,7 @@ vendor/keggx/      modified KGML parser with upstream attribution
   `~/.ollama/models/blobs`, so the file exists twice until you delete the
   download. Extra context variants (4k/8k/16k/32k) reuse the same blob and cost
   nothing. Relocate the store with `OLLAMA_MODELS` if space is tight. |
+  
   | GPU | **~23 GiB VRAM at 16k context** | measured peak 22.9 GiB
   (weights 15.3 + KV cache 4.7 + compute graph 1.1). A 24 GB card is close to
   full; use `ctx8k` if it does not fit. 32k needs roughly 27 GiB. |
